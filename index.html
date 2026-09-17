@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plan de poda priorizado. Piloto de Los Olivos</title>
+<meta name="description" content="Mapa interactivo del índice de criticidad por vegetación en Los Olivos, por alimentador y por subestación. Pluz Energía y UTEC.">
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+<div class="viz-root">
+
+  <header class="cabecera">
+    <div class="cabecera-texto">
+      <p class="sobretitulo">Pluz Energía y UTEC. Gestión de vegetación en red aérea de media tensión</p>
+      <h1>Plan de poda priorizado. Piloto de Los Olivos</h1>
+      <p class="subtitulo" id="subtitulo">Índice de criticidad de 0 a 100 para la ventana de <span id="ventana">-</span>. Primer prototipo.</p>
+    </div>
+    <button class="boton-tema" id="boton-tema" type="button" aria-label="Cambiar entre tema claro y oscuro">Tema</button>
+  </header>
+
+  <div class="controles" role="group" aria-label="Controles de la vista">
+    <div class="control">
+      <span class="control-etiqueta" id="etiqueta-nivel">Ver el índice por</span>
+      <div class="segmentado" role="radiogroup" aria-labelledby="etiqueta-nivel">
+        <button type="button" role="radio" aria-checked="true" class="activo" data-nivel="alimentadores">Alimentador</button>
+        <button type="button" role="radio" aria-checked="false" data-nivel="subestaciones">Subestación</button>
+      </div>
+    </div>
+
+    <div class="control control-ancho">
+      <label class="control-etiqueta" for="corte">Tamaño del plan <span class="valor-control" id="corte-valor">10</span></label>
+      <input type="range" id="corte" min="1" max="30" value="10" step="1" aria-describedby="corte-ayuda">
+      <span class="ayuda" id="corte-ayuda">Cuántas unidades entran al programa del trimestre</span>
+    </div>
+
+    <div class="control control-ancho">
+      <label class="control-etiqueta" for="buscar">Buscar</label>
+      <input type="search" id="buscar" placeholder="Código o dirección" autocomplete="off">
+    </div>
+
+    <div class="control">
+      <span class="control-etiqueta">Descargar</span>
+      <button class="boton" id="descargar" type="button">Plan en CSV</button>
+    </div>
+  </div>
+
+  <section class="tarjetas" aria-label="Resumen del plan seleccionado">
+    <div class="tarjeta"><p class="tarjeta-valor" id="kpi-unidades">-</p><p class="tarjeta-etiqueta" id="kpi-unidades-et">Unidades en el plan</p></div>
+    <div class="tarjeta"><p class="tarjeta-valor" id="kpi-clientes">-</p><p class="tarjeta-etiqueta">Clientes de baja tensión cubiertos</p></div>
+    <div class="tarjeta"><p class="tarjeta-valor" id="kpi-kva">-</p><p class="tarjeta-etiqueta">kVA instalados bajo el plan</p></div>
+    <div class="tarjeta"><p class="tarjeta-valor" id="kpi-indice">-</p><p class="tarjeta-etiqueta">Índice mínimo que entra al plan</p></div>
+  </section>
+
+  <main class="tablero">
+    <section class="panel panel-mapa" aria-labelledby="titulo-mapa">
+      <div class="panel-cabecera">
+        <h2 id="titulo-mapa">Mapa de calor del distrito</h2>
+        <p class="panel-nota">Cada celda es el área de influencia de una subestación aérea. El color es el índice de la unidad seleccionada.</p>
+      </div>
+      <div class="mapa-caja" id="mapa-caja">
+        <svg id="mapa" role="img" aria-labelledby="titulo-mapa desc-mapa"><desc id="desc-mapa">Mapa del distrito de Los Olivos dividido en celdas coloreadas según el índice de criticidad. La tabla que acompaña al mapa contiene los mismos datos en forma de lista ordenada.</desc></svg>
+        <div class="ficha" id="ficha" role="tooltip" aria-live="polite" hidden></div>
+      </div>
+      <div class="leyenda" id="leyenda"></div>
+    </section>
+
+    <section class="panel panel-lista" aria-labelledby="titulo-lista">
+      <div class="panel-cabecera">
+        <h2 id="titulo-lista">Lista priorizada</h2>
+        <p class="panel-nota" id="lista-nota">Las unidades sombreadas entran al plan del trimestre.</p>
+      </div>
+      <div class="lista-caja">
+        <table class="tabla" id="tabla">
+          <caption class="oculto">Unidades del piloto ordenadas por índice de criticidad</caption>
+          <thead>
+            <tr><th scope="col">N°</th><th scope="col">Unidad</th><th scope="col">Índice</th><th scope="col" class="num">Clientes</th></tr>
+          </thead>
+          <tbody id="tabla-cuerpo"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <section class="panel panel-detalle" aria-labelledby="titulo-detalle">
+    <div class="panel-cabecera">
+      <h2 id="titulo-detalle">Detalle de la unidad seleccionada</h2>
+      <p class="panel-nota">Pase el puntero sobre el mapa o la lista, o toque una celda, para fijar una unidad aquí.</p>
+    </div>
+    <div class="detalle" id="detalle"></div>
+  </section>
+
+  <footer class="pie">
+    <p><strong>Cómo leer el índice.</strong> Combina cuatro componentes normalizados a percentil dentro del piloto: probabilidad estimada del alimentador con peso 0,40, reloj de poda con peso 0,20, criticidad por SAIDI con peso 0,20 y exposición por clientes y potencia con peso 0,20. Un valor de 100 es la unidad más crítica del piloto, no una probabilidad.</p>
+    <p><strong>Alcance.</strong> Primer prototipo sobre el corte de datos de agosto de 2026. Es una herramienta de soporte a la decisión: no autoriza trabajos ni reemplaza la inspección en campo. Las subestaciones compactas y subterráneas se dibujan en gris porque no están expuestas a vegetación.</p>
+    <p class="pie-meta" id="pie-meta"></p>
+  </footer>
+
+</div>
+
+<!-- D3 versión 7.9.0 servido desde el propio repositorio: la página no depende de una red
+     externa y funciona igual en GitHub Pages, en un servidor local o sin conexión. -->
+<script src="js/vendor/d3.v7.9.0.min.js"></script>
+<script src="data/criticidad_los_olivos.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
