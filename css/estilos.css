@@ -1,184 +1,387 @@
-/* Prototipo de priorización de poda, piloto de Los Olivos.
-   Paleta: una sola familia de tono para el índice, de claro a oscuro, porque el índice
-   es una magnitud continua. Los tonos de identidad y de estado van aparte. */
+/* Prototipo de priorización de poda, piloto de Los Olivos. Pluz Energía y UTEC.
+
+   Color. Los tres tonos del logotipo de Pluz son el origen de toda la paleta:
+   azul #395AA1, verde #6CAC5E y amarillo #FCC13F. A partir de ellos se derivan tres
+   familias con trabajos distintos, y ninguna se usa para el trabajo de otra:
+
+   - Identidad de interfaz: el azul corporativo. Cabecera, controles, foco y selección.
+   - Magnitud (el índice): una rampa secuencial de un solo tono nacida del amarillo
+     corporativo, de claro a oscuro. Siete pasos, luminancia OKLCH monótona de 0,94 a
+     0,55 con saltos de 0,065, giro de tono de 37° dentro del umbral de un solo tono.
+     El extremo claro queda por debajo de 3:1 contra la superficie a propósito: las
+     celdas del mapa se tocan entre sí y llevan trazo, así que se leen unas contra
+     otras, y además la cifra va siempre escrita al lado en la lista y en la ficha.
+   - Identidad de serie (los cuatro componentes del índice): cuatro tonos categóricos
+     tomados del propio logotipo más un violeta como cuarto tono neutral. Validados:
+     peor par adyacente ΔE 36,9 con protanopia y deuteranopia y ΔE 40,5 con visión
+     normal, muy por encima de los umbrales de 8 y 15.
+
+   El tema claro es el principal. El oscuro no es un volteo automático: son pasos
+   propios, vueltos a validar contra la superficie oscura. */
 
 *, *::before, *::after { box-sizing: border-box; }
 
 .viz-root {
   color-scheme: light;
 
-  --superficie:      #fcfcfb;
+  /* --- tonos corporativos, tal como salen del logotipo --- */
+  --pluz-azul:       #395aa1;
+  --pluz-verde:      #6cac5e;
+  --pluz-amarillo:   #fcc13f;
+
+  --azul-900:        #1d2f55;
+  --azul-700:        #2c467c;
+  --azul-600:        #395aa1;
+  --azul-300:        #9db1d6;
+  --azul-100:        #e8eef8;
+  --azul-050:        #f4f7fc;
+
+  /* --- superficies y tinta --- */
+  --superficie:      #f6f8fc;
   --superficie-2:    #ffffff;
-  --superficie-3:    #f3f2ef;
-  --borde:           #e2e0da;
-  --borde-fuerte:    #c9c6bd;
-  --tinta:           #12120f;
-  --tinta-2:         #52514e;
-  --tinta-3:         #7c7a73;
+  --superficie-3:    #eef2f9;
+  --borde:           #dee5f0;
+  --borde-fuerte:    #c2cee2;
+  --tinta:           #131a26;
+  --tinta-2:         #4e5a6e;
+  --tinta-3:         #76839a;
 
-  /* Rampa secuencial de un solo tono para el índice, de claro a oscuro.
-     Monótona en luminancia: 0,834 a 0,089. */
-  --idx-1: #fde8d5;
-  --idx-2: #fbcfa7;
-  --idx-3: #f7b177;
-  --idx-4: #f28a3c;
-  --idx-5: #ea6f12;
-  --idx-6: #d45f00;
-  --idx-7: #b74f00;
-  --idx-8: #8f3a00;
+  /* --- rampa secuencial del índice, 7 pasos claro → oscuro --- */
+  --idx-1: #ffeaab;
+  --idx-2: #ffcf5e;
+  --idx-3: #f9b200;
+  --idx-4: #e79a00;
+  --idx-5: #d48300;
+  --idx-6: #c06d00;
+  --idx-7: #ac5700;
 
-  --acento:          #1b5e20;
-  --acento-suave:    #e3efe4;
-  --neutro-mapa:     #d8d6d0;
-  --plan-borde:      #12120f;
+  /* --- identidad de serie: los cuatro componentes del índice --- */
+  --comp-1: #2e54ae;   /* probabilidad del alimentador, peso 0,40 */
+  --comp-2: #dfa71d;   /* reloj de poda,               peso 0,20 */
+  --comp-3: #6f3e9d;   /* criticidad por SAIDI,        peso 0,20 */
+  --comp-4: #7ac869;   /* exposición,                  peso 0,20 */
 
-  --radio: 10px;
-  --sombra: 0 1px 2px rgba(18, 18, 15, .06), 0 4px 14px rgba(18, 18, 15, .05);
+  /* --- estado: significado reservado, siempre con icono y rótulo --- */
+  --ok:              #2f7d32;
+  --ok-suave:        #e6f2e5;
+  --aviso:           #8a5a00;
+  --critico:         #b3261e;
+
+  --neutro-mapa:     #c8d1e0;
+  --via-mapa:        rgba(19, 26, 38, .5);
+  --plan-borde:      #131a26;
+  --rejilla:         #e4eaf4;
+
+  --radio:   14px;
+  --radio-s: 9px;
+  --sombra:    0 1px 2px rgba(19, 26, 38, .05), 0 6px 18px rgba(19, 26, 38, .06);
+  --sombra-alta: 0 4px 10px rgba(19, 26, 38, .10), 0 18px 40px rgba(19, 26, 38, .14);
 
   background: var(--superficie);
   color: var(--tinta);
-  font-family: "Arial", "Helvetica Neue", Helvetica, system-ui, sans-serif;
+  /* Pila del sistema: moderna en cada plataforma y sin una sola petición de red, que es
+     la propiedad que permite abrir la página desde el disco igual que publicada. */
+  font-family: system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, sans-serif;
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.5;
   min-height: 100vh;
-  padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(24px, env(safe-area-inset-bottom, 0px));
+  padding: max(18px, env(safe-area-inset-top, 0px)) 18px max(28px, env(safe-area-inset-bottom, 0px));
+  -webkit-font-smoothing: antialiased;
 }
 
+/* Tema oscuro: pasos propios, no un volteo del claro. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .viz-root {
-    color-scheme: dark;
-    --superficie: #17170f; --superficie-2: #1f1f18; --superficie-3: #26251d;
-    --borde: #35342b; --borde-fuerte: #4c4a3f;
-    --tinta: #f7f6f1; --tinta-2: #c7c5bb; --tinta-3: #96948a;
-    --idx-1: #3a1c05; --idx-2: #5c2c06; --idx-3: #7d3d05; --idx-4: #a15008;
-    --idx-5: #c4650d; --idx-6: #e07f24; --idx-7: #f0a05a; --idx-8: #f8c290;
-    --acento: #7fc784; --acento-suave: #24331f;
-    --neutro-mapa: #3d3b33; --plan-borde: #f7f6f1;
-    --sombra: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+  :root:not([data-theme="light"]) .viz-root { color-scheme: dark; }
+}
+:root[data-theme="dark"] .viz-root { color-scheme: dark; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .viz-root,
+  :root[data-theme="dark"] .viz-root {
+    --superficie: #0e131c; --superficie-2: #161e2b; --superficie-3: #1e2837;
+    --borde: #2a3546; --borde-fuerte: #3b4860;
+    --tinta: #f2f5fa; --tinta-2: #b9c4d6; --tinta-3: #8895ab;
+    --azul-100: #1c2740; --azul-050: #141d2e; --azul-300: #6f8dc4; --azul-700: #7fa0d8;
+
+    --idx-1: #773a00; --idx-2: #905000; --idx-3: #a96700; --idx-4: #c18000;
+    --idx-5: #d89a00; --idx-6: #eeb500; --idx-7: #ffd335;
+
+    --comp-1: #4573de; --comp-2: #ba8900; --comp-3: #925ac9; --comp-4: #51aa3c;
+
+    --ok: #71c46f; --ok-suave: #1b2e1b; --aviso: #d9a23a; --critico: #f08b82;
+    --neutro-mapa: #38445a; --via-mapa: rgba(255, 255, 255, .42);
+    --plan-borde: #f2f5fa; --rejilla: #232e3f;
+    --sombra: 0 1px 2px rgba(0,0,0,.5), 0 6px 18px rgba(0,0,0,.4);
+    --sombra-alta: 0 4px 10px rgba(0,0,0,.5), 0 18px 40px rgba(0,0,0,.55);
   }
 }
 :root[data-theme="dark"] .viz-root {
-  color-scheme: dark;
-  --superficie: #17170f; --superficie-2: #1f1f18; --superficie-3: #26251d;
-  --borde: #35342b; --borde-fuerte: #4c4a3f;
-  --tinta: #f7f6f1; --tinta-2: #c7c5bb; --tinta-3: #96948a;
-  --idx-1: #3a1c05; --idx-2: #5c2c06; --idx-3: #7d3d05; --idx-4: #a15008;
-  --idx-5: #c4650d; --idx-6: #e07f24; --idx-7: #f0a05a; --idx-8: #f8c290;
-  --acento: #7fc784; --acento-suave: #24331f;
-  --neutro-mapa: #3d3b33; --plan-borde: #f7f6f1;
-  --sombra: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+  --superficie: #0e131c; --superficie-2: #161e2b; --superficie-3: #1e2837;
+  --borde: #2a3546; --borde-fuerte: #3b4860;
+  --tinta: #f2f5fa; --tinta-2: #b9c4d6; --tinta-3: #8895ab;
+  --azul-100: #1c2740; --azul-050: #141d2e; --azul-300: #6f8dc4; --azul-700: #7fa0d8;
+  --idx-1: #773a00; --idx-2: #905000; --idx-3: #a96700; --idx-4: #c18000;
+  --idx-5: #d89a00; --idx-6: #eeb500; --idx-7: #ffd335;
+  --comp-1: #4573de; --comp-2: #ba8900; --comp-3: #925ac9; --comp-4: #51aa3c;
+  --ok: #71c46f; --ok-suave: #1b2e1b; --aviso: #d9a23a; --critico: #f08b82;
+  --neutro-mapa: #38445a; --via-mapa: rgba(255, 255, 255, .42);
+  --plan-borde: #f2f5fa; --rejilla: #232e3f;
+  --sombra: 0 1px 2px rgba(0,0,0,.5), 0 6px 18px rgba(0,0,0,.4);
+  --sombra-alta: 0 4px 10px rgba(0,0,0,.5), 0 18px 40px rgba(0,0,0,.55);
 }
 
-body { margin: 0; background: #fcfcfb; }
+body { margin: 0; background: #f6f8fc; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) body { background: #17170f; }
+  :root:not([data-theme="light"]) body { background: #0e131c; }
 }
-:root[data-theme="dark"] body { background: #17170f; }
+:root[data-theme="dark"] body { background: #0e131c; }
 
 img { max-width: 100%; }
 [hidden] { display: none !important; }
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 
 .oculto {
   position: absolute; width: 1px; height: 1px; overflow: hidden;
   clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
 }
 
+/* --------------------------------------------------------------------- iconos */
+.ico {
+  width: 18px; height: 18px; flex: 0 0 auto;
+  fill: none; stroke: currentColor; stroke-width: 1.75;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.ico-et { width: 14px; height: 14px; stroke-width: 2; }
+.ico-h  { width: 17px; height: 17px; color: var(--azul-600); }
+.ico-pie { width: 15px; height: 15px; margin-top: 2px; color: var(--tinta-3); }
+
 /* ---------------------------------------------------------------- cabecera */
 .cabecera {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 16px; max-width: 1400px; margin: 0 auto 18px; flex-wrap: wrap;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 18px; max-width: 1440px; margin: 0 auto 18px; flex-wrap: wrap;
+  background: var(--superficie-2); border: 1px solid var(--borde);
+  border-radius: var(--radio); box-shadow: var(--sombra);
+  padding: 16px 20px; position: relative; overflow: hidden;
 }
+/* Filete con los tres tonos del logotipo: la firma de marca más discreta posible. */
+.cabecera::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 4px;
+  background: linear-gradient(90deg,
+    var(--pluz-azul) 0 42%, var(--pluz-amarillo) 42% 72%, var(--pluz-verde) 72% 100%);
+}
+.marca { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.marca-logo { width: auto; height: 42px; display: block; }
+/* En oscuro el logotipo va sobre su propia placa clara en vez de retocarle el color: el
+   azul corporativo pierde contraste contra la superficie oscura y alterarlo con un filtro
+   dejaría de ser el color de la marca. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .marca-logo {
+    background: #fff; padding: 7px 11px; border-radius: 9px; box-sizing: content-box;
+  }
+}
+:root[data-theme="dark"] .marca-logo {
+  background: #fff; padding: 7px 11px; border-radius: 9px; box-sizing: content-box;
+}
+.marca-barra { width: 1px; align-self: stretch; background: var(--borde); }
+.marca-texto { min-width: 0; }
 .sobretitulo {
-  margin: 0 0 4px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--tinta-3);
+  margin: 0 0 3px; font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--tinta-3); font-weight: 600;
 }
-.cabecera h1 { margin: 0 0 4px; font-size: clamp(20px, 3.2vw, 28px); line-height: 1.2; }
-.subtitulo { margin: 0; color: var(--tinta-2); font-size: 14px; }
+.cabecera h1 {
+  margin: 0 0 3px; font-size: clamp(19px, 2.7vw, 26px); line-height: 1.15;
+  letter-spacing: -.015em; font-weight: 700;
+}
+.subtitulo { margin: 0; color: var(--tinta-2); font-size: 13.5px; }
+.subtitulo strong { color: var(--tinta); font-weight: 600; }
 
-.boton, .boton-tema {
-  font: inherit; font-size: 13px; padding: 7px 13px; border-radius: 8px;
-  border: 1px solid var(--borde-fuerte); background: var(--superficie-2);
-  color: var(--tinta); cursor: pointer;
+.cabecera-acciones { display: flex; align-items: center; gap: 10px; }
+.sello {
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px;
+  border-radius: 999px; background: var(--azul-050); border: 1px solid var(--borde);
+  color: var(--tinta-2); font-size: 12px; font-weight: 600; white-space: nowrap;
 }
-.boton:hover, .boton-tema:hover { background: var(--superficie-3); }
-.boton:focus-visible, .boton-tema:focus-visible,
-.segmentado button:focus-visible, input:focus-visible, tr:focus-visible {
-  outline: 2px solid var(--acento); outline-offset: 2px;
-}
+.sello .ico { width: 14px; height: 14px; color: var(--azul-600); }
 
 /* --------------------------------------------------------------- controles */
+.boton, .boton-icono {
+  font: inherit; font-size: 13px; font-weight: 600; border-radius: var(--radio-s);
+  border: 1px solid var(--borde-fuerte); background: var(--superficie-2);
+  color: var(--tinta); cursor: pointer; display: inline-flex; align-items: center;
+  gap: 8px; padding: 9px 14px; transition: background .14s, border-color .14s;
+}
+.boton-icono { padding: 9px; }
+.boton:hover, .boton-icono:hover { background: var(--superficie-3); border-color: var(--azul-300); }
+.boton-principal {
+  background: var(--azul-600); border-color: var(--azul-600); color: #fff;
+}
+.boton-principal:hover { background: var(--azul-700); border-color: var(--azul-700); }
+:root[data-theme="dark"] .boton-principal { color: #0e131c; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .boton-principal { color: #0e131c; }
+}
+
+.boton:focus-visible, .boton-icono:focus-visible,
+.segmentado button:focus-visible, input:focus-visible, tr:focus-visible {
+  outline: 2px solid var(--azul-600); outline-offset: 2px;
+}
+
 .controles {
-  display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: flex-end;
-  max-width: 1400px; margin: 0 auto 16px; padding: 14px 16px;
+  display: flex; flex-wrap: wrap; gap: 14px 26px; align-items: flex-end;
+  max-width: 1440px; margin: 0 auto 16px; padding: 15px 18px;
   background: var(--superficie-2); border: 1px solid var(--borde);
   border-radius: var(--radio); box-shadow: var(--sombra);
 }
-.control { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.control-ancho { flex: 1 1 200px; }
+.control { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.control-ancho { flex: 1 1 210px; }
 .control-etiqueta {
-  font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--tinta-3);
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--tinta-3); font-weight: 600;
 }
-.valor-control { color: var(--tinta); font-weight: 700; text-transform: none; letter-spacing: 0; }
-.ayuda { font-size: 12px; color: var(--tinta-3); }
+.control-etiqueta .ico-et { color: var(--azul-600); }
+.valor-control {
+  color: var(--azul-700); font-weight: 700; text-transform: none; letter-spacing: 0;
+  font-size: 12.5px;
+}
+.ayuda { font-size: 11.5px; color: var(--tinta-3); }
 
-.segmentado { display: inline-flex; border: 1px solid var(--borde-fuerte); border-radius: 8px; overflow: hidden; }
+.segmentado {
+  display: inline-flex; border: 1px solid var(--borde-fuerte); border-radius: var(--radio-s);
+  overflow: hidden; background: var(--superficie-3); padding: 3px; gap: 3px;
+}
 .segmentado button {
-  font: inherit; font-size: 13px; padding: 7px 15px; border: 0; cursor: pointer;
-  background: var(--superficie-2); color: var(--tinta-2);
+  font: inherit; font-size: 13px; font-weight: 600; padding: 7px 16px; border: 0;
+  cursor: pointer; border-radius: 6px; background: transparent; color: var(--tinta-2);
+  transition: background .14s, color .14s;
 }
-.segmentado button + button { border-left: 1px solid var(--borde-fuerte); }
-.segmentado button.activo { background: var(--acento); color: #fff; font-weight: 700; }
-:root[data-theme="dark"] .segmentado button.activo { color: #12120f; }
+.segmentado button:hover { color: var(--tinta); }
+.segmentado button.activo {
+  background: var(--azul-600); color: #fff; box-shadow: 0 1px 2px rgba(19,26,38,.18);
+}
+:root[data-theme="dark"] .segmentado button.activo { color: #0e131c; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .segmentado button.activo { color: #0e131c; }
+}
 
+.campo-buscar { position: relative; display: flex; align-items: center; }
+.ico-campo {
+  position: absolute; left: 10px; width: 15px; height: 15px;
+  color: var(--tinta-3); pointer-events: none;
+}
 input[type="search"] {
-  font: inherit; font-size: 13px; padding: 7px 10px; border-radius: 8px;
+  font: inherit; font-size: 13px; padding: 9px 11px 9px 32px; border-radius: var(--radio-s);
   border: 1px solid var(--borde-fuerte); background: var(--superficie);
   color: var(--tinta); width: 100%; min-width: 0;
 }
-input[type="range"] { width: 100%; accent-color: var(--acento); }
+input[type="search"]:focus { border-color: var(--azul-600); }
+
+input[type="range"] {
+  width: 100%; accent-color: var(--azul-600); height: 22px; margin: 0;
+}
 
 /* ---------------------------------------------------------------- tarjetas */
 .tarjetas {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;
-  max-width: 1400px; margin: 0 auto 16px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px;
+  max-width: 1440px; margin: 0 auto 16px;
 }
 .tarjeta {
+  display: flex; align-items: flex-start; gap: 12px;
   background: var(--superficie-2); border: 1px solid var(--borde);
-  border-radius: var(--radio); padding: 12px 14px; box-shadow: var(--sombra);
+  border-radius: var(--radio); padding: 15px 16px; box-shadow: var(--sombra);
 }
-.tarjeta-valor { margin: 0; font-size: clamp(20px, 2.6vw, 26px); font-weight: 700; line-height: 1.15; }
-.tarjeta-etiqueta { margin: 3px 0 0; font-size: 12px; color: var(--tinta-2); }
+.tarjeta-icono {
+  display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 auto;
+  border-radius: 10px;
+}
+.tarjeta-icono .ico { width: 19px; height: 19px; }
+.ti-azul  { background: var(--azul-100);  color: var(--azul-600); }
+.ti-verde { background: var(--ok-suave);  color: var(--ok); }
+.ti-ambar { background: #fdf0d6; color: var(--aviso); }
+.ti-ambar { background: color-mix(in srgb, var(--pluz-amarillo) 22%, var(--superficie-2)); }
+.ti-gris  { background: var(--superficie-3); color: var(--tinta-2); }
+.tarjeta-cuerpo { min-width: 0; }
+.tarjeta-valor {
+  margin: 0; font-size: clamp(21px, 2.5vw, 27px); font-weight: 700; line-height: 1.1;
+  letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.tarjeta-valor .unidad {
+  font-size: 13px; font-weight: 600; color: var(--tinta-3); margin-left: 4px;
+  letter-spacing: 0;
+}
+.tarjeta-etiqueta { margin: 3px 0 0; font-size: 12px; color: var(--tinta-2); line-height: 1.35; }
+.tarjeta-pie { margin: 4px 0 0; font-size: 11.5px; color: var(--tinta-3); font-weight: 600; }
 
 /* ----------------------------------------------------------------- tablero */
 .tablero {
-  display: grid; gap: 16px; max-width: 1400px; margin: 0 auto 16px;
-  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+  display: grid; gap: 16px; max-width: 1440px; margin: 0 auto 16px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
   align-items: stretch;
 }
-@media (max-width: 900px) { .tablero { grid-template-columns: 1fr; } }
+@media (max-width: 960px) { .tablero { grid-template-columns: 1fr; } }
 
 .panel {
   background: var(--superficie-2); border: 1px solid var(--borde);
-  border-radius: var(--radio); box-shadow: var(--sombra); padding: 14px 16px 16px;
+  border-radius: var(--radio); box-shadow: var(--sombra); padding: 16px 18px 18px;
   min-width: 0;
 }
-.panel-cabecera { margin-bottom: 10px; }
-.panel h2 { margin: 0 0 3px; font-size: 15px; }
-.panel-nota { margin: 0; font-size: 12px; color: var(--tinta-2); }
+.panel-cabecera { margin-bottom: 12px; }
+.panel h2 {
+  margin: 0 0 4px; font-size: 15px; font-weight: 700; letter-spacing: -.01em;
+  display: flex; align-items: center; gap: 8px;
+}
+.panel-nota { margin: 0; font-size: 12px; color: var(--tinta-2); line-height: 1.45; }
 
 .mapa-caja { position: relative; width: 100%; }
 #mapa { display: block; width: 100%; height: auto; touch-action: manipulation; }
 
-.celda { stroke: var(--superficie-2); stroke-width: 1.4; cursor: pointer; transition: opacity .12s; }
-.celda.apagada { opacity: .42; }
-.contorno-alim { fill: none; stroke: var(--superficie-2); stroke-width: 2.6; pointer-events: none; }
-.contorno-distrito { fill: none; stroke: var(--borde-fuerte); stroke-width: 1.4; pointer-events: none; }
-.punto-no-expuesto { fill: var(--neutro-mapa); }
-.anillo-plan { fill: none; stroke: var(--plan-borde); stroke-width: 2; pointer-events: none; }
-.marca-plan { fill: var(--plan-borde); font-size: 10px; font-weight: 700; pointer-events: none; }
-.marca-plan-fondo { fill: var(--superficie-2); stroke: var(--plan-borde); stroke-width: 1.4; pointer-events: none; }
-.resaltado { stroke: var(--acento); stroke-width: 3.2; }
-.escala-barra { font-size: 11px; fill: var(--tinta-2); }
+/* Sin `stroke` aquí a propósito. El trazo de cada celda lo fija el script con el mismo
+   color que su relleno, y una declaración de CSS ganaría a ese atributo de presentación y
+   volvería a dibujar la malla blanca que precisamente se quiere apagar. Solo `.resaltado`
+   vuelve a pedir color, que es cuando sí debe ganar. */
+.celda { stroke-width: .6; cursor: pointer; transition: opacity .12s; }
+.celda.apagada { opacity: .3; }
+.borde-alimentador {
+  fill: none; stroke: var(--superficie-2); stroke-width: 2; stroke-linecap: round;
+  pointer-events: none;
+}
+.borde-alimentador.tenue { stroke-width: 1.2; opacity: .5; }
+.contorno-distrito {
+  fill: none; stroke: var(--tinta-2); stroke-width: 1.6; stroke-linejoin: round;
+  pointer-events: none;
+}
+/* Las avenidas no aportan ningún dato del modelo: están para ubicarse. Van en tinta
+   translúcida, que se apoya sobre cualquier paso de la rampa sin competir con él. */
+.via { fill: none; stroke: var(--via-mapa); stroke-width: 1.3; stroke-linecap: round; pointer-events: none; }
+.via-troncal { stroke-width: 2.4; }
+.rotulo-via {
+  font-family: inherit; font-size: 9.5px; font-weight: 600; fill: var(--tinta-2);
+  pointer-events: none; paint-order: stroke;
+  stroke: var(--superficie-2); stroke-width: 3; stroke-linejoin: round;
+}
+/* El contorno del plan va con funda: una línea ancha del color de la superficie debajo y
+   la azul encima. Así se lee igual sobre el extremo claro y sobre el oscuro de la rampa,
+   que es justo donde una línea de un solo color desaparecería. */
+/* Fina a propósito. Los alimentadores no son territorios contiguos: en las zonas densas
+   sus subestaciones se entrelazan, de modo que la frontera del plan es de verdad un
+   encaje. Con un trazo grueso ese encaje tapa el relleno y el mapa deja de leerse, así
+   que la línea se mantiene delgada y quien resume el plan de un vistazo son las marcas
+   numeradas. */
+.contorno-plan-funda {
+  fill: none; stroke: var(--superficie-2); stroke-width: 3; stroke-linejoin: round;
+  stroke-linecap: round; pointer-events: none; opacity: .85;
+}
+.contorno-plan {
+  fill: none; stroke: var(--azul-600); stroke-width: 1.3; stroke-linejoin: round;
+  stroke-linecap: round; pointer-events: none;
+}
+/* 244 subestaciones no expuestas sobre un mapa de este tamaño son ruido si se dibujan con
+   fuerza: van como una trama tenue que se nota al mirarla y no al leer el mapa. */
+.punto-no-expuesto { fill: var(--neutro-mapa); opacity: .32; }
+.marca-plan { fill: #fff; font-size: 10px; font-weight: 700; pointer-events: none; }
+.marca-plan-fondo { fill: var(--azul-600); stroke: var(--superficie-2); stroke-width: 1.6; pointer-events: none; }
+.celda.resaltado { stroke: var(--azul-600); stroke-width: 2.6; }
 .guia-etiqueta { fill: none; stroke: var(--borde-fuerte); stroke-width: 1; pointer-events: none; }
 .texto-etiqueta {
   fill: var(--tinta-2); font-size: 11px; font-weight: 700;
@@ -187,71 +390,256 @@ input[type="range"] { width: 100%; accent-color: var(--acento); }
 
 /* -------------------------------------------------------------------- ficha */
 .ficha {
-  position: absolute; z-index: 5; pointer-events: none; max-width: 250px;
+  position: absolute; z-index: 5; pointer-events: none; width: 232px;
   background: var(--superficie-2); color: var(--tinta);
-  border: 1px solid var(--borde-fuerte); border-radius: 8px;
-  padding: 9px 11px; box-shadow: var(--sombra); font-size: 12px; line-height: 1.35;
+  border: 1px solid var(--borde-fuerte); border-radius: var(--radio-s);
+  padding: 11px 13px; box-shadow: var(--sombra-alta); font-size: 12px; line-height: 1.4;
 }
-.ficha h3 { margin: 0 0 2px; font-size: 13px; }
-.ficha .ficha-sub { margin: 0 0 6px; color: var(--tinta-3); font-size: 11px; }
-.ficha dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; }
+.ficha-tope { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ficha h3 { margin: 0; font-size: 13.5px; font-weight: 700; }
+.ficha .ficha-puesto {
+  font-size: 11px; color: var(--tinta-3); font-weight: 600; white-space: nowrap;
+}
+.ficha .ficha-sub { margin: 1px 0 8px; color: var(--tinta-3); font-size: 11px; }
+.ficha-indice { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; }
+.ficha-indice-num { font-size: 26px; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
+.ficha-indice-de { font-size: 11px; color: var(--tinta-3); }
+.ficha-chip {
+  width: 16px; height: 16px; border-radius: 4px; flex: 0 0 auto;
+  border: 1px solid rgba(19,26,38,.18);
+}
+.ficha dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; }
 .ficha dt { color: var(--tinta-2); }
-.ficha dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
-.ficha .ficha-indice { font-size: 18px; font-weight: 700; }
+.ficha dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 .pastilla {
-  display: inline-block; margin-top: 6px; padding: 2px 7px; border-radius: 999px;
-  background: var(--acento-suave); color: var(--acento); font-size: 11px; font-weight: 700;
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 9px;
+  padding: 3px 9px; border-radius: 999px;
+  background: var(--ok-suave); color: var(--ok); font-size: 11px; font-weight: 700;
 }
+.pastilla .ico { width: 12px; height: 12px; stroke-width: 2.6; }
 
 /* ------------------------------------------------------------------ leyenda */
-.leyenda { margin-top: 10px; }
-.leyenda svg { display: block; width: 100%; max-width: 420px; height: auto; }
+/* La leyenda también es el histograma: cada paso de la rampa lleva encima cuántas
+   unidades caen en él, así que el mismo objeto explica el color y muestra la
+   distribución en lugar de gastar espacio en dos piezas. */
+.leyenda { margin-top: 12px; }
+.leyenda svg { display: block; width: 100%; max-width: 460px; height: auto; }
+.leyenda-texto { font-size: 10.5px; fill: var(--tinta-3); font-family: inherit; }
+.leyenda-titulo { font-size: 11px; fill: var(--tinta-2); font-weight: 600; font-family: inherit; }
+.leyenda-barra-conteo { fill: var(--azul-300); }
+.leyenda-marca-plan { stroke: var(--plan-borde); stroke-width: 1.5; }
+.leyenda-marca-texto { font-size: 10px; fill: var(--tinta); font-weight: 700; font-family: inherit; }
 
 /* ------------------------------------------------------------------- tabla */
 .panel-lista { display: flex; flex-direction: column; }
-.lista-caja { flex: 1 1 auto; min-height: 260px; max-height: 720px; overflow-y: auto; overflow-x: auto; margin: 0 -4px; }
-@media (max-width: 900px) { .lista-caja { max-height: 380px; } }
+.lista-caja {
+  flex: 1 1 auto; min-height: 280px; max-height: 760px; overflow-y: auto;
+  overflow-x: hidden; margin: 0 -4px;
+}
+@media (max-width: 960px) { .lista-caja { max-height: 420px; } }
 .tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
 .tabla th {
   position: sticky; top: 0; background: var(--superficie-2); text-align: left;
-  font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--tinta-3);
-  padding: 6px 6px; border-bottom: 1px solid var(--borde); z-index: 1;
+  font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--tinta-3);
+  padding: 7px 6px; border-bottom: 1px solid var(--borde); z-index: 1; font-weight: 600;
 }
 .tabla th.num, .tabla td.num { text-align: right; }
-.tabla td { padding: 5px 6px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
-.tabla tbody tr { cursor: pointer; }
-.tabla tbody tr:hover, .tabla tbody tr.activa { background: var(--superficie-3); }
-.tabla tbody tr.en-plan td:first-child { border-left: 3px solid var(--acento); }
+.tabla td { padding: 6px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+.tabla tbody tr { cursor: pointer; transition: background .1s; }
+.tabla tbody tr:hover { background: var(--superficie-3); }
+.tabla tbody tr.activa { background: var(--azul-100); }
+.tabla tbody tr.en-plan td:first-child {
+  box-shadow: inset 3px 0 0 var(--azul-600);
+}
 .tabla tbody tr.fuera { color: var(--tinta-3); }
+.celda-puesto { font-variant-numeric: tabular-nums; color: var(--tinta-3); font-weight: 600; width: 1%; }
+.tabla tbody tr.en-plan .celda-puesto { color: var(--azul-700); }
 .celda-id { font-weight: 700; white-space: nowrap; }
 .celda-sub { display: block; font-weight: 400; font-size: 11px; color: var(--tinta-3); }
-.indice-celda { display: flex; align-items: center; gap: 7px; }
+/* La cifra va fuera de la barra y no encima: superpuesta perdería contraste justo en los
+   valores altos, que son los que más importa poder leer. También es el canal de alivio
+   que exige el extremo claro de la rampa. */
+.indice-celda { display: flex; align-items: center; gap: 8px; min-width: 96px; }
 .barra-fondo {
-  position: relative; display: block; flex: 1 1 auto; height: 14px; min-width: 46px;
-  background: var(--superficie-3); border-radius: 3px;
+  position: relative; display: block; flex: 1 1 auto; height: 8px; min-width: 44px;
+  background: var(--superficie-3); border-radius: 999px; overflow: hidden;
 }
-.barra-valor { position: absolute; inset: 0 auto 0 0; display: block; border-radius: 3px; }
+.barra-valor { position: absolute; inset: 0 auto 0 0; display: block; border-radius: 999px; }
 .barra-texto {
-  flex: 0 0 auto; min-width: 20px; text-align: right;
-  font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+  flex: 0 0 auto; min-width: 21px; text-align: right;
+  font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums;
 }
 td { font-variant-numeric: tabular-nums; }
 
+/* ------------------------------------------------------------------- curva */
+.panel-curva { max-width: 1440px; margin: 0 auto 16px; }
+.curva-caja { width: 100%; }
+#curva { display: block; width: 100%; height: auto; }
+.curva-eje { font-size: 10.5px; fill: var(--tinta-3); font-family: inherit; }
+.curva-titulo { font-size: 11.5px; fill: var(--tinta-2); font-weight: 600; font-family: inherit; }
+.curva-rejilla { stroke: var(--rejilla); stroke-width: 1; }
+.curva-banda { fill: var(--azul-600); opacity: .07; }
+.curva-corte { stroke: var(--azul-600); stroke-width: 1.6; stroke-dasharray: 4 3; }
+.curva-corte-et {
+  font-size: 11px; fill: var(--azul-700); font-weight: 700; font-family: inherit;
+}
+.curva-linea { fill: none; stroke: var(--azul-600); stroke-width: 2; stroke-linejoin: round; }
+.curva-area { fill: var(--azul-600); opacity: .12; }
+.curva-punto { fill: var(--azul-600); stroke: var(--superficie-2); stroke-width: 2; }
+.curva-et {
+  font-size: 11px; fill: var(--tinta); font-weight: 700; font-family: inherit;
+  paint-order: stroke; stroke: var(--superficie-2); stroke-width: 3.5;
+}
+
 /* ----------------------------------------------------------------- detalle */
-.panel-detalle { max-width: 1400px; margin: 0 auto 16px; }
-.detalle { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.panel-detalle { max-width: 1440px; margin: 0 auto 16px; }
+.detalle {
+  display: grid; gap: 18px;
+  grid-template-columns: minmax(230px, .85fr) minmax(280px, 1.3fr) minmax(230px, 1fr);
+}
+@media (max-width: 1080px) { .detalle { grid-template-columns: 1fr; } }
 .detalle-vacio { color: var(--tinta-3); font-size: 13px; }
-.bloque h3 { margin: 0 0 6px; font-size: 13px; }
-.bloque dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 13px; }
-.bloque dt { color: var(--tinta-2); }
-.bloque dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
-.componente { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; margin-bottom: 7px; font-size: 12px; }
-.componente-barra { grid-column: 1 / -1; height: 8px; background: var(--superficie-3); border-radius: 3px; overflow: hidden; }
-.componente-barra span { display: block; height: 100%; background: var(--acento); }
-.motivos { margin: 0; padding-left: 18px; font-size: 13px; }
-.motivos li { margin-bottom: 3px; }
+.detalle-vacio .ico { vertical-align: -3px; }
+.bloque { min-width: 0; }
+.bloque h3 {
+  margin: 0 0 10px; font-size: 12px; font-weight: 700; color: var(--tinta-3);
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.bloque dl {
+  margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; font-size: 13px;
+}
+.bloque dt { color: var(--tinta-2); display: flex; align-items: center; gap: 7px; }
+.bloque dt .ico { width: 14px; height: 14px; color: var(--tinta-3); }
+.bloque dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* Encabezado del detalle: el índice como cifra protagonista, porque es el número que
+   toma la decisión. */
+.detalle-tope { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.detalle-indice {
+  display: grid; place-items: center; width: 74px; height: 74px; flex: 0 0 auto;
+  border-radius: 16px; color: #fff; line-height: 1;
+}
+.detalle-indice b { font-size: 29px; font-weight: 700; letter-spacing: -.02em; }
+.detalle-indice span { font-size: 10px; opacity: .88; margin-top: 2px; }
+.detalle-ident h4 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -.015em; }
+.detalle-ident p { margin: 2px 0 0; font-size: 12.5px; color: var(--tinta-2); }
+.etiqueta-plan {
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 6px;
+  padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  background: var(--ok-suave); color: var(--ok);
+}
+.etiqueta-plan.fuera-plan { background: var(--superficie-3); color: var(--tinta-3); }
+.etiqueta-plan .ico { width: 12px; height: 12px; stroke-width: 2.6; }
+
+/* La barra de aportes: los cuatro componentes multiplicados por su peso suman
+   exactamente el índice, así que la barra es la fórmula dibujada y no una metáfora.
+   Segmentos separados por 2px de superficie, como exige la especificación de marcas. */
+.aportes { margin-bottom: 12px; }
+.aportes-barra {
+  display: flex; height: 26px; border-radius: 7px; overflow: hidden; gap: 2px;
+  background: var(--superficie-3);
+}
+.aportes-seg { height: 100%; min-width: 2px; }
+.aportes-escala {
+  position: relative; height: 15px; margin-top: 5px;
+  border-top: 1px solid var(--borde); font-size: 10px; color: var(--tinta-3);
+}
+.aportes-escala span { position: absolute; top: 2px; transform: translateX(-50%); white-space: nowrap; }
+.aportes-escala span:first-child { transform: none; }
+.aportes-escala span:last-child { transform: translateX(-100%); }
+
+.comp-tabla { display: grid; gap: 9px; }
+.comp-fila { display: grid; grid-template-columns: 11px 1fr auto; gap: 0 9px; align-items: center; }
+.comp-punto { width: 11px; height: 11px; border-radius: 3px; grid-row: 1; }
+.comp-nombre { font-size: 12.5px; grid-row: 1; }
+.comp-peso { font-size: 10.5px; color: var(--tinta-3); font-weight: 600; }
+.comp-cifras { grid-row: 1; text-align: right; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.comp-cifras b { font-weight: 700; }
+.comp-cifras i { font-style: normal; color: var(--tinta-3); font-size: 11px; }
+/* La barra lleva una marca en la mediana del piloto: sin esa referencia un 60 no dice
+   si es alto o bajo dentro de este distrito. */
+.comp-pista {
+  grid-column: 2 / -1; grid-row: 2; position: relative; height: 7px; margin-top: 3px;
+  background: var(--superficie-3); border-radius: 999px;
+}
+.comp-pista > i { position: absolute; inset: 0 auto 0 0; display: block; border-radius: 999px; }
+.comp-mediana {
+  position: absolute; top: -2px; bottom: -2px; width: 2px;
+  background: var(--tinta-3); opacity: .7; border-radius: 1px;
+}
+.comp-nota { margin: 10px 0 0; font-size: 11px; color: var(--tinta-3); display: flex; gap: 6px; }
+.comp-nota .ico { width: 13px; height: 13px; margin-top: 1px; }
+
+.motivos { margin: 0 0 12px; padding: 0; list-style: none; display: grid; gap: 7px; }
+.motivos li { display: flex; gap: 8px; font-size: 12.5px; align-items: flex-start; }
+.motivos .ico { width: 14px; height: 14px; margin-top: 2px; color: var(--aviso); }
 
 /* --------------------------------------------------------------------- pie */
-.pie { max-width: 1400px; margin: 0 auto; font-size: 12px; color: var(--tinta-2); }
-.pie p { margin: 0 0 7px; }
-.pie-meta { color: var(--tinta-3); }
+.pie {
+  max-width: 1440px; margin: 0 auto; font-size: 12px; color: var(--tinta-2);
+  background: var(--superficie-2); border: 1px solid var(--borde);
+  border-radius: var(--radio); padding: 15px 18px; box-shadow: var(--sombra);
+}
+.pie p { margin: 0 0 9px; display: flex; gap: 9px; line-height: 1.5; }
+.pie p:last-child { margin-bottom: 0; }
+.pie strong { color: var(--tinta); }
+.pie-meta { color: var(--tinta-3); font-size: 11.5px; padding-top: 9px; border-top: 1px solid var(--borde); }
+
+@media (max-width: 560px) {
+  .viz-root { padding-left: 12px; padding-right: 12px; }
+  .cabecera { padding: 14px; }
+  .marca-logo { height: 32px; }
+  .panel { padding: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* ------------------------------------------------------------------ filtros */
+/* Los filtros no cambian el plan, que lo fija siempre el corte: resaltan un subconjunto
+   a la vez en el mapa, la lista y la curva. Por eso viven fuera de los gráficos, en una
+   barra propia donde se ve qué está activo y se quita de un clic. */
+.filtros {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  max-width: 1440px; margin: 0 auto 16px; padding: 10px 16px;
+  background: var(--azul-050); border: 1px solid var(--azul-300);
+  border-radius: var(--radio);
+}
+.filtros-titulo {
+  font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--azul-700); font-weight: 700;
+}
+.filtros-chips { display: flex; gap: 8px; flex-wrap: wrap; flex: 1 1 auto; }
+.chip {
+  display: inline-flex; align-items: center; gap: 7px; padding: 4px 6px 4px 11px;
+  border-radius: 999px; background: var(--superficie-2); border: 1px solid var(--borde-fuerte);
+  font-size: 12px; font-weight: 600; color: var(--tinta);
+}
+.chip-muestra { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
+.chip button {
+  display: grid; place-items: center; width: 18px; height: 18px; padding: 0;
+  border: 0; border-radius: 50%; background: var(--superficie-3); color: var(--tinta-2);
+  cursor: pointer; font: inherit; font-size: 13px; line-height: 1;
+}
+.chip button:hover { background: var(--critico); color: #fff; }
+.boton-sutil { padding: 6px 12px; font-size: 12px; }
+
+/* Piezas sobre las que se puede hacer clic para filtrar o seleccionar. */
+.leyenda .tramo, .leyenda .tramo-conteo { cursor: pointer; }
+.leyenda .tramo-marco {
+  fill: none; stroke: var(--tinta); stroke-width: 2; pointer-events: none;
+}
+.curva-barra { cursor: pointer; }
+.curva-activa { fill: none; stroke: var(--tinta); stroke-width: 2; pointer-events: none; }
+.curva-asa {
+  fill: var(--azul-600); stroke: var(--superficie-2); stroke-width: 1.5;
+  cursor: ew-resize;
+}
+.curva-asa-zona { fill: transparent; cursor: ew-resize; }
+.enlace-alim {
+  background: none; border: 0; padding: 0; font: inherit; color: var(--azul-700);
+  font-weight: 700; cursor: pointer; text-decoration: underline;
+  text-underline-offset: 2px; text-decoration-style: dotted;
+}
+.enlace-alim:hover { text-decoration-style: solid; }

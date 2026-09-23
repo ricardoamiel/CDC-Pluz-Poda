@@ -5,23 +5,62 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Plan de poda priorizado. Piloto de Los Olivos</title>
 <meta name="description" content="Mapa interactivo del índice de criticidad por vegetación en Los Olivos, por alimentador y por subestación. Pluz Energía y UTEC.">
+<meta name="theme-color" content="#395aa1">
+<link rel="icon" href="assets/favicon.png" type="image/png">
 <link rel="stylesheet" href="css/estilos.css">
 </head>
 <body>
+
+<!-- Sprite de iconos. Va en línea y no como fuente ni como archivo aparte para que la
+     página siga sin hacer una sola petición de red: es la condición que permite abrirla
+     desde el disco, desde un servidor local o desde GitHub Pages sin ninguna diferencia.
+     Trazo de 1,75 y rejilla de 24, el mismo dibujo para todos. -->
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <symbol viewBox="0 0 24 24" id="i-mapa"><path d="M9 4 3 6.5v13L9 17l6 2.5 6-2.5v-13L15 6.5 9 4Z"/><path d="M9 4v13M15 6.5v13"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-lista"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-curva"><path d="M3 3v16.5h18"/><path d="M6.5 15.5c3.5 0 4.5-8 8-8 2.5 0 3 4 4.5 4"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-tijeras"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M20 4 8.4 16.2M14.5 14.5 20 20M8.4 7.8l2.9 3"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-clientes"><path d="M16.5 20v-1.8a3.6 3.6 0 0 0-3.6-3.6H6.6A3.6 3.6 0 0 0 3 18.2V20"/><circle cx="9.75" cy="7.4" r="3.4"/><path d="M21 20v-1.8a3.6 3.6 0 0 0-2.7-3.48M15.3 4.2a3.6 3.6 0 0 1 0 6.44"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-rayo"><path d="M12.5 2 4 13.2h6.4L11.5 22 20 10.8h-6.4L12.5 2Z"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-umbral"><path d="M3 12h4.5l2.6-7 3.8 14 2.6-7H21"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-descargar"><path d="M21 15.5v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5M12 3v12"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-buscar"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m20 20-4.4-4.4"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-sol"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2 12h2.4M19.6 12H22M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-luna"><path d="M20.5 14.3A8.7 8.7 0 0 1 9.7 3.5a8.7 8.7 0 1 0 10.8 10.8Z"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-reloj"><circle cx="12" cy="12" r="9"/><path d="M12 6.8V12l3.4 2"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-alerta"><path d="M12 3.6 2.6 19.8h18.8L12 3.6Z"/><path d="M12 9.6v4.2M12 17.1h.01"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-info"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.8h.01"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-medidor"><path d="M20.5 16.5a9.5 9.5 0 1 0-17 0"/><path d="m12 12.5 4.2-3.6"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-capas"><path d="m12 2.8 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5M3 17.4l9 5 9-5"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-pin"><path d="M20 10.4c0 5.6-8 11.6-8 11.6s-8-6-8-11.6a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10.2" r="2.9"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-tilde"><path d="m4.5 12.5 5 5 10-11"/></symbol>
+  </defs>
+</svg>
+
 <div class="viz-root">
 
   <header class="cabecera">
-    <div class="cabecera-texto">
-      <p class="sobretitulo">Pluz Energía y UTEC. Gestión de vegetación en red aérea de media tensión</p>
-      <h1>Plan de poda priorizado. Piloto de Los Olivos</h1>
-      <p class="subtitulo" id="subtitulo">Índice de criticidad de 0 a 100 para la ventana de <span id="ventana">-</span>. Primer prototipo.</p>
+    <div class="marca">
+      <img class="marca-logo" src="assets/pluz-logo.png" alt="Pluz Energía" width="491" height="250">
+      <span class="marca-barra" aria-hidden="true"></span>
+      <div class="marca-texto">
+        <p class="sobretitulo">Subgerencia MT&nbsp;/&nbsp;BT · Gestión de vegetación en red aérea</p>
+        <h1>Plan de poda priorizado</h1>
+        <p class="subtitulo">Piloto de Los Olivos · ventana de <strong id="ventana">-</strong></p>
+      </div>
     </div>
-    <button class="boton-tema" id="boton-tema" type="button" aria-label="Cambiar entre tema claro y oscuro">Tema</button>
+    <div class="cabecera-acciones">
+      <span class="sello" id="sello-corte"><svg class="ico" aria-hidden="true"><use href="#i-reloj"/></svg><span></span></span>
+      <button class="boton-icono" id="boton-tema" type="button" aria-label="Cambiar entre tema claro y oscuro" title="Cambiar tema">
+        <svg class="ico" aria-hidden="true"><use href="#i-luna"/></svg>
+      </button>
+    </div>
   </header>
 
   <div class="controles" role="group" aria-label="Controles de la vista">
     <div class="control">
-      <span class="control-etiqueta" id="etiqueta-nivel">Ver el índice por</span>
+      <span class="control-etiqueta" id="etiqueta-nivel"><svg class="ico ico-et" aria-hidden="true"><use href="#i-capas"/></svg>Ver el índice por</span>
       <div class="segmentado" role="radiogroup" aria-labelledby="etiqueta-nivel">
         <button type="button" role="radio" aria-checked="true" class="activo" data-nivel="alimentadores">Alimentador</button>
         <button type="button" role="radio" aria-checked="false" data-nivel="subestaciones">Subestación</button>
@@ -29,34 +68,75 @@
     </div>
 
     <div class="control control-ancho">
-      <label class="control-etiqueta" for="corte">Tamaño del plan <span class="valor-control" id="corte-valor">10</span></label>
+      <label class="control-etiqueta" for="corte"><svg class="ico ico-et" aria-hidden="true"><use href="#i-tijeras"/></svg>Tamaño del plan <span class="valor-control" id="corte-valor">10</span></label>
       <input type="range" id="corte" min="1" max="30" value="10" step="1" aria-describedby="corte-ayuda">
       <span class="ayuda" id="corte-ayuda">Cuántas unidades entran al programa del trimestre</span>
     </div>
 
-    <div class="control control-ancho">
-      <label class="control-etiqueta" for="buscar">Buscar</label>
-      <input type="search" id="buscar" placeholder="Código o dirección" autocomplete="off">
+    <div class="control control-ancho control-buscar">
+      <label class="control-etiqueta" for="buscar"><svg class="ico ico-et" aria-hidden="true"><use href="#i-buscar"/></svg>Buscar</label>
+      <div class="campo-buscar">
+        <svg class="ico ico-campo" aria-hidden="true"><use href="#i-buscar"/></svg>
+        <input type="search" id="buscar" placeholder="Código o dirección" autocomplete="off">
+      </div>
     </div>
 
     <div class="control">
-      <span class="control-etiqueta">Descargar</span>
-      <button class="boton" id="descargar" type="button">Plan en CSV</button>
+      <span class="control-etiqueta">&nbsp;</span>
+      <button class="boton boton-principal" id="descargar" type="button">
+        <svg class="ico" aria-hidden="true"><use href="#i-descargar"/></svg>Descargar plan
+      </button>
     </div>
   </div>
 
+  <!-- Los filtros activos se muestran aquí y no dentro de cada gráfico: valen para todas
+       las vistas a la vez, así que tienen que verse y quitarse en un solo sitio. -->
+  <div class="filtros" id="filtros" role="status" aria-live="polite" hidden>
+    <span class="filtros-titulo">Filtro activo</span>
+    <div class="filtros-chips" id="filtros-chips"></div>
+    <button class="boton boton-sutil" id="limpiar-filtros" type="button">Quitar todo</button>
+  </div>
+
   <section class="tarjetas" aria-label="Resumen del plan seleccionado">
-    <div class="tarjeta"><p class="tarjeta-valor" id="kpi-unidades">-</p><p class="tarjeta-etiqueta" id="kpi-unidades-et">Unidades en el plan</p></div>
-    <div class="tarjeta"><p class="tarjeta-valor" id="kpi-clientes">-</p><p class="tarjeta-etiqueta">Clientes de baja tensión cubiertos</p></div>
-    <div class="tarjeta"><p class="tarjeta-valor" id="kpi-kva">-</p><p class="tarjeta-etiqueta">kVA instalados bajo el plan</p></div>
-    <div class="tarjeta"><p class="tarjeta-valor" id="kpi-indice">-</p><p class="tarjeta-etiqueta">Índice mínimo que entra al plan</p></div>
+    <div class="tarjeta">
+      <div class="tarjeta-icono ti-azul"><svg class="ico" aria-hidden="true"><use href="#i-tijeras"/></svg></div>
+      <div class="tarjeta-cuerpo">
+        <p class="tarjeta-valor" id="kpi-unidades">-</p>
+        <p class="tarjeta-etiqueta" id="kpi-unidades-et">Unidades en el plan</p>
+        <p class="tarjeta-pie" id="kpi-unidades-pie">-</p>
+      </div>
+    </div>
+    <div class="tarjeta">
+      <div class="tarjeta-icono ti-verde"><svg class="ico" aria-hidden="true"><use href="#i-clientes"/></svg></div>
+      <div class="tarjeta-cuerpo">
+        <p class="tarjeta-valor" id="kpi-clientes">-</p>
+        <p class="tarjeta-etiqueta">Clientes de baja tensión cubiertos</p>
+        <p class="tarjeta-pie" id="kpi-clientes-pie">-</p>
+      </div>
+    </div>
+    <div class="tarjeta">
+      <div class="tarjeta-icono ti-ambar"><svg class="ico" aria-hidden="true"><use href="#i-rayo"/></svg></div>
+      <div class="tarjeta-cuerpo">
+        <p class="tarjeta-valor" id="kpi-kva">-</p>
+        <p class="tarjeta-etiqueta">Potencia instalada bajo el plan</p>
+        <p class="tarjeta-pie" id="kpi-kva-pie">-</p>
+      </div>
+    </div>
+    <div class="tarjeta">
+      <div class="tarjeta-icono ti-gris"><svg class="ico" aria-hidden="true"><use href="#i-umbral"/></svg></div>
+      <div class="tarjeta-cuerpo">
+        <p class="tarjeta-valor" id="kpi-indice">-</p>
+        <p class="tarjeta-etiqueta">Índice mínimo que entra al plan</p>
+        <p class="tarjeta-pie" id="kpi-indice-pie">-</p>
+      </div>
+    </div>
   </section>
 
   <main class="tablero">
     <section class="panel panel-mapa" aria-labelledby="titulo-mapa">
       <div class="panel-cabecera">
-        <h2 id="titulo-mapa">Mapa de calor del distrito</h2>
-        <p class="panel-nota">Cada celda es el área de influencia de una subestación aérea. El color es el índice de la unidad seleccionada.</p>
+        <h2 id="titulo-mapa"><svg class="ico ico-h" aria-hidden="true"><use href="#i-mapa"/></svg>Mapa de criticidad del distrito</h2>
+        <p class="panel-nota">Cada celda es el área de influencia de una subestación aérea sobre el límite real del distrito. El color es el índice de la unidad elegida y el contorno azul marca lo que entra al plan.</p>
       </div>
       <div class="mapa-caja" id="mapa-caja">
         <svg id="mapa" role="img" aria-labelledby="titulo-mapa desc-mapa"><desc id="desc-mapa">Mapa del distrito de Los Olivos dividido en celdas coloreadas según el índice de criticidad. La tabla que acompaña al mapa contiene los mismos datos en forma de lista ordenada.</desc></svg>
@@ -67,14 +147,14 @@
 
     <section class="panel panel-lista" aria-labelledby="titulo-lista">
       <div class="panel-cabecera">
-        <h2 id="titulo-lista">Lista priorizada</h2>
+        <h2 id="titulo-lista"><svg class="ico ico-h" aria-hidden="true"><use href="#i-lista"/></svg>Lista priorizada</h2>
         <p class="panel-nota" id="lista-nota">Las unidades sombreadas entran al plan del trimestre.</p>
       </div>
       <div class="lista-caja">
         <table class="tabla" id="tabla">
           <caption class="oculto">Unidades del piloto ordenadas por índice de criticidad</caption>
           <thead>
-            <tr><th scope="col">N°</th><th scope="col">Unidad</th><th scope="col">Índice</th><th scope="col" class="num">Clientes</th></tr>
+            <tr><th scope="col">N°</th><th scope="col">Unidad</th><th scope="col">Índice de criticidad</th><th scope="col" class="num">Clientes</th></tr>
           </thead>
           <tbody id="tabla-cuerpo"></tbody>
         </table>
@@ -82,18 +162,33 @@
     </section>
   </main>
 
+  <!-- La curva responde la pregunta que abre siempre la discusión de capacidad: cuánto se
+       gana al estirar el plan una unidad más. Dos paneles apilados sobre el mismo eje de
+       puesto, nunca dos escalas verticales en un mismo marco. -->
+  <section class="panel panel-curva" aria-labelledby="titulo-curva">
+    <div class="panel-cabecera">
+      <h2 id="titulo-curva"><svg class="ico ico-h" aria-hidden="true"><use href="#i-curva"/></svg>Cuánto rinde estirar el plan</h2>
+      <p class="panel-nota" id="curva-nota">Índice y cobertura acumulada de clientes según hasta qué puesto llega el programa. Arrastre el asa azul para cambiar el tamaño del plan, o haga clic en una barra para fijar esa unidad.</p>
+    </div>
+    <div class="curva-caja" id="curva-caja">
+      <svg id="curva" role="img" aria-labelledby="titulo-curva desc-curva"><desc id="desc-curva">Dos gráficos apilados sobre el mismo eje de puesto: arriba el índice de criticidad de cada unidad, abajo el porcentaje acumulado de clientes de baja tensión cubiertos. Una banda marca hasta dónde llega el plan.</desc></svg>
+    </div>
+  </section>
+
   <section class="panel panel-detalle" aria-labelledby="titulo-detalle">
     <div class="panel-cabecera">
-      <h2 id="titulo-detalle">Detalle de la unidad seleccionada</h2>
+      <h2 id="titulo-detalle"><svg class="ico ico-h" aria-hidden="true"><use href="#i-pin"/></svg>Detalle de la unidad seleccionada</h2>
       <p class="panel-nota">Pase el puntero sobre el mapa o la lista, o toque una celda, para fijar una unidad aquí.</p>
     </div>
     <div class="detalle" id="detalle"></div>
   </section>
 
   <footer class="pie">
-    <p><strong>Cómo leer el índice.</strong> Combina cuatro componentes normalizados a percentil dentro del piloto: probabilidad estimada del alimentador con peso 0,40, reloj de poda con peso 0,20, criticidad por SAIDI con peso 0,20 y exposición por clientes y potencia con peso 0,20. Un valor de 100 es la unidad más crítica del piloto, no una probabilidad.</p>
-    <p><strong>Alcance.</strong> Primer prototipo sobre el corte de datos de agosto de 2026. Es una herramienta de soporte a la decisión: no autoriza trabajos ni reemplaza la inspección en campo. Las subestaciones compactas y subterráneas se dibujan en gris porque no están expuestas a vegetación.</p>
+    <p><svg class="ico ico-pie" aria-hidden="true"><use href="#i-alerta"/></svg><span><strong>Cómo se enlazan los gráficos.</strong> El mapa, la lista, la curva y el detalle son cuatro vistas del mismo estado. Al hacer clic en una celda, una fila o una barra se fija esa unidad en las cuatro. Al hacer clic en un tramo de la escala de color, o en el código de un alimentador, se resalta ese subconjunto en todas a la vez. Los filtros no cambian el plan: el plan lo fija siempre el tamaño elegido.</span></p>
+    <p><svg class="ico ico-pie" aria-hidden="true"><use href="#i-info"/></svg><span><strong>Cómo leer el índice.</strong> Combina cuatro componentes normalizados a percentil dentro del piloto: probabilidad estimada del alimentador con peso 0,40, reloj de poda con peso 0,20, criticidad por SAIDI con peso 0,20 y exposición por clientes y potencia con peso 0,20. Un valor de 100 es la unidad más crítica del piloto, no una probabilidad.</span></p>
+    <p><svg class="ico ico-pie" aria-hidden="true"><use href="#i-alerta"/></svg><span><strong>Alcance.</strong> Primer prototipo sobre el corte de datos de agosto de 2026. Es una herramienta de soporte a la decisión: no autoriza trabajos ni reemplaza la inspección en campo. Las subestaciones compactas y subterráneas se dibujan en gris porque no están expuestas a vegetación.</span></p>
     <p class="pie-meta" id="pie-meta"></p>
+    <p class="pie-meta">Límite del distrito y avenidas: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© colaboradores de OpenStreetMap</a>, bajo licencia ODbL 1.0.</p>
   </footer>
 
 </div>
@@ -102,6 +197,9 @@
      externa y funciona igual en GitHub Pages, en un servidor local o sin conexión. -->
 <script src="js/vendor/d3.v7.9.0.min.js"></script>
 <script src="data/criticidad_los_olivos.js"></script>
+<!-- Límite del distrito y avenidas principales, de OpenStreetMap (ODbL 1.0), ya
+     simplificados y guardados en el repositorio: 14 kB y ninguna petición de red. -->
+<script src="data/geografia_los_olivos.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
