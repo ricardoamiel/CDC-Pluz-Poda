@@ -1,0 +1,11 @@
+# Datos de Pluz Energía. Este repositorio es público porque lo sirve GitHub Pages, así que
+# los lotes que envía la empresa y todo lo que se deriva fila a fila de ellos se quedan en
+# el equipo de quien corre el pipeline. Lo único que se publica es la carpeta data/, que
+# es lo que la página necesita para dibujarse.
+pipeline/datos/
+pipeline/salidas/
+
+# Python
+__pycache__/
+*.pyc
+.venv/

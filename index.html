@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Plan de poda priorizado. Piloto de Los Olivos</title>
-<meta name="description" content="Mapa interactivo del índice de criticidad por vegetación en Los Olivos, por alimentador y por subestación. Pluz Energía y UTEC.">
+<title>Plan de poda priorizado. Piloto Los Olivos</title>
+<meta name="description" content="Mapa interactivo del índice de criticidad por vegetación en el piloto de Los Olivos, por alimentador y por subestación, y comparación con otros distritos de Lima Norte. Pluz Energía y UTEC.">
 <meta name="theme-color" content="#395aa1">
 <link rel="icon" href="assets/favicon.png" type="image/png">
-<link rel="stylesheet" href="css/estilos.css">
+<link rel="stylesheet" href="css/estilos.css?v=20261005">
 </head>
 <body>
 
@@ -46,8 +46,8 @@
       <span class="marca-barra" aria-hidden="true"></span>
       <div class="marca-texto">
         <p class="sobretitulo">Subgerencia MT&nbsp;/&nbsp;BT · Gestión de vegetación en red aérea</p>
-        <h1>Plan de poda priorizado</h1>
-        <p class="subtitulo">Piloto de Los Olivos · ventana de <strong id="ventana">-</strong></p>
+        <h1>Plan de poda priorizado <span class="insignia-piloto"><svg class="ico" aria-hidden="true"><use href="#i-pin"/></svg>Piloto Los Olivos</span></h1>
+        <p class="subtitulo">Ventana de <strong id="ventana">-</strong></p>
       </div>
     </div>
     <div class="cabecera-acciones">
@@ -58,6 +58,19 @@
     </div>
   </header>
 
+  <!-- Dos pestañas: el piloto, que es la herramienta de trabajo, y la comparación con otros
+       distritos que Pluz pidió en la reunión N°3. La comparación no reemplaza al piloto:
+       lo pone al lado de otro distrito con el mismo método. -->
+  <nav class="pestanas" role="tablist" aria-label="Vistas de la herramienta">
+    <button type="button" role="tab" id="pestana-piloto" aria-controls="vista-piloto" aria-selected="true" class="activa">
+      <svg class="ico" aria-hidden="true"><use href="#i-pin"/></svg>Piloto Los Olivos
+    </button>
+    <button type="button" role="tab" id="pestana-comparar" aria-controls="vista-comparar" aria-selected="false">
+      <svg class="ico" aria-hidden="true"><use href="#i-capas"/></svg>Comparar distritos
+    </button>
+  </nav>
+
+  <div id="vista-piloto" role="tabpanel" aria-labelledby="pestana-piloto">
   <div class="controles" role="group" aria-label="Controles de la vista">
     <div class="control">
       <span class="control-etiqueta" id="etiqueta-nivel"><svg class="ico ico-et" aria-hidden="true"><use href="#i-capas"/></svg>Ver el índice por</span>
@@ -115,19 +128,19 @@
       </div>
     </div>
     <div class="tarjeta">
-      <div class="tarjeta-icono ti-ambar"><svg class="ico" aria-hidden="true"><use href="#i-rayo"/></svg></div>
+      <div class="tarjeta-icono ti-ambar"><svg class="ico" aria-hidden="true"><use href="#i-medidor"/></svg></div>
       <div class="tarjeta-cuerpo">
-        <p class="tarjeta-valor" id="kpi-kva">-</p>
-        <p class="tarjeta-etiqueta">Potencia instalada bajo el plan</p>
-        <p class="tarjeta-pie" id="kpi-kva-pie">-</p>
+        <p class="tarjeta-valor" id="kpi-saidi">-</p>
+        <p class="tarjeta-etiqueta">SAIDI del último año en los alimentadores del plan</p>
+        <p class="tarjeta-pie" id="kpi-saidi-pie">-</p>
       </div>
     </div>
     <div class="tarjeta">
-      <div class="tarjeta-icono ti-gris"><svg class="ico" aria-hidden="true"><use href="#i-umbral"/></svg></div>
+      <div class="tarjeta-icono ti-gris"><svg class="ico" aria-hidden="true"><use href="#i-alerta"/></svg></div>
       <div class="tarjeta-cuerpo">
-        <p class="tarjeta-valor" id="kpi-indice">-</p>
-        <p class="tarjeta-etiqueta">Índice mínimo que entra al plan</p>
-        <p class="tarjeta-pie" id="kpi-indice-pie">-</p>
+        <p class="tarjeta-valor" id="kpi-interrupciones">-</p>
+        <p class="tarjeta-etiqueta">Interrupciones del último año en los alimentadores del plan</p>
+        <p class="tarjeta-pie" id="kpi-interrupciones-pie">-</p>
       </div>
     </div>
   </section>
@@ -182,13 +195,59 @@
     </div>
     <div class="detalle" id="detalle"></div>
   </section>
+  </div>
+
+  <div id="vista-comparar" role="tabpanel" aria-labelledby="pestana-comparar" hidden>
+    <div class="controles" role="group" aria-label="Controles de la comparación">
+      <div class="control">
+        <label class="control-etiqueta" for="distrito"><svg class="ico ico-et" aria-hidden="true"><use href="#i-mapa"/></svg>Comparar Los Olivos con</label>
+        <select id="distrito" class="selector"></select>
+      </div>
+      <div class="control">
+        <span class="control-etiqueta" id="etiqueta-nivel-cmp"><svg class="ico ico-et" aria-hidden="true"><use href="#i-capas"/></svg>Ver el índice por</span>
+        <div class="segmentado" id="nivel-cmp" role="radiogroup" aria-labelledby="etiqueta-nivel-cmp">
+          <button type="button" role="radio" aria-checked="true" class="activo" data-nivel="alimentadores">Alimentador</button>
+          <button type="button" role="radio" aria-checked="false" data-nivel="subestaciones">Subestación</button>
+        </div>
+      </div>
+      <p class="ayuda ayuda-cmp">Mismo modelo, mismos cuatro componentes y mismos pesos que el piloto. El índice se calcula dentro de cada distrito: 100 es la unidad más crítica de ese distrito, así que el color compara posiciones, no riesgos absolutos. Para eso están las cifras de abajo.</p>
+    </div>
+
+    <section class="panel panel-cifras" aria-labelledby="titulo-cifras">
+      <div class="panel-cabecera">
+        <h2 id="titulo-cifras"><svg class="ico ico-h" aria-hidden="true"><use href="#i-medidor"/></svg>Los dos distritos en cifras</h2>
+        <p class="panel-nota">Datos de <span class="periodo-inicio">-</span> a <span class="periodo-fin">-</span>. Un alimentador que llega a varios distritos se cuenta en cada uno.</p>
+      </div>
+      <div class="cifras" id="cifras"></div>
+    </section>
+
+    <div class="leyenda leyenda-cmp" id="leyenda-cmp"></div>
+    <div class="mapas-cmp">
+      <section class="panel panel-mapa-cmp" aria-labelledby="titulo-mapa-a">
+        <div class="panel-cabecera">
+          <h2 id="titulo-mapa-a"><svg class="ico ico-h" aria-hidden="true"><use href="#i-pin"/></svg><span>Los Olivos</span><span class="etiqueta-piloto">piloto</span></h2>
+          <p class="panel-nota" id="nota-mapa-a">-</p>
+        </div>
+        <div class="mapa-caja" id="caja-mapa-a"><svg class="mapa-cmp" id="mapa-a" role="img" aria-label="Mapa del índice de criticidad de Los Olivos"></svg><div class="ficha" id="ficha-a" role="tooltip" hidden></div></div>
+        <div class="top-cmp" id="top-a"></div>
+      </section>
+      <section class="panel panel-mapa-cmp" aria-labelledby="titulo-mapa-b">
+        <div class="panel-cabecera">
+          <h2 id="titulo-mapa-b"><svg class="ico ico-h" aria-hidden="true"><use href="#i-mapa"/></svg><span id="nombre-b">-</span></h2>
+          <p class="panel-nota" id="nota-mapa-b">-</p>
+        </div>
+        <div class="mapa-caja" id="caja-mapa-b"><svg class="mapa-cmp" id="mapa-b" role="img" aria-label="Mapa del índice de criticidad del distrito elegido"></svg><div class="ficha" id="ficha-b" role="tooltip" hidden></div></div>
+        <div class="top-cmp" id="top-b"></div>
+      </section>
+    </div>
+  </div>
 
   <footer class="pie">
     <p><svg class="ico ico-pie" aria-hidden="true"><use href="#i-alerta"/></svg><span><strong>Cómo se enlazan los gráficos.</strong> El mapa, la lista, la curva y el detalle son cuatro vistas del mismo estado. Al hacer clic en una celda, una fila o una barra se fija esa unidad en las cuatro. Al hacer clic en un tramo de la escala de color, o en el código de un alimentador, se resalta ese subconjunto en todas a la vez. Los filtros no cambian el plan: el plan lo fija siempre el tamaño elegido.</span></p>
-    <p><svg class="ico ico-pie" aria-hidden="true"><use href="#i-info"/></svg><span><strong>Cómo leer el índice.</strong> Combina cuatro componentes normalizados a percentil dentro del piloto: probabilidad estimada del alimentador con peso 0,40, reloj de poda con peso 0,20, criticidad por SAIDI con peso 0,20 y exposición por clientes y potencia con peso 0,20. Un valor de 100 es la unidad más crítica del piloto, no una probabilidad.</span></p>
-    <p><svg class="ico ico-pie" aria-hidden="true"><use href="#i-alerta"/></svg><span><strong>Alcance.</strong> Primer prototipo sobre el corte de datos de agosto de 2026. Es una herramienta de soporte a la decisión: no autoriza trabajos ni reemplaza la inspección en campo. Las subestaciones compactas y subterráneas se dibujan en gris porque no están expuestas a vegetación.</span></p>
+    <p><svg class="ico ico-pie" aria-hidden="true"><use href="#i-info"/></svg><span><strong>Cómo leer el índice.</strong> Combina cuatro componentes normalizados a percentil dentro del distrito: probabilidad estimada del alimentador con peso 0,40, reloj de poda con peso 0,20, criticidad por SAIDI con peso 0,20 y exposición por clientes y potencia con peso 0,20. Un valor de 100 es la unidad más crítica del distrito, no una probabilidad. La probabilidad sale del historial de vegetación, de las interrupciones y del tiempo sin poda: el SAIDI y los clientes no entran en ella porque ya cuentan en el índice por su lado.</span></p>
+    <p><svg class="ico ico-pie" aria-hidden="true"><use href="#i-alerta"/></svg><span><strong>Alcance.</strong> Prototipo sobre el corte de datos de <span class="periodo-fin">-</span>. Es una herramienta de soporte a la decisión: no autoriza trabajos ni reemplaza la inspección en campo. Las subestaciones compactas y subterráneas se dibujan en gris porque no están expuestas a vegetación.</span></p>
     <p class="pie-meta" id="pie-meta"></p>
-    <p class="pie-meta">Límite del distrito y avenidas: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© colaboradores de OpenStreetMap</a>, bajo licencia ODbL 1.0.</p>
+    <p class="pie-meta">Límites de los distritos y avenidas: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© colaboradores de OpenStreetMap</a>, bajo licencia ODbL 1.0.</p>
   </footer>
 
 </div>
@@ -196,10 +255,14 @@
 <!-- D3 versión 7.9.0 servido desde el propio repositorio: la página no depende de una red
      externa y funciona igual en GitHub Pages, en un servidor local o sin conexión. -->
 <script src="js/vendor/d3.v7.9.0.min.js"></script>
-<script src="data/criticidad_los_olivos.js"></script>
+<script src="data/criticidad_los_olivos.js?v=202610051823"></script>
 <!-- Límite del distrito y avenidas principales, de OpenStreetMap (ODbL 1.0), ya
      simplificados y guardados en el repositorio: 14 kB y ninguna petición de red. -->
-<script src="data/geografia_los_olivos.js"></script>
-<script src="js/app.js"></script>
+<script src="data/geografia_los_olivos.js?v=202610051823"></script>
+<!-- Los ocho distritos de la comparación y sus límites, de OpenStreetMap (ODbL 1.0). -->
+<script src="data/distritos.js?v=202610051823"></script>
+<script src="data/geografia_distritos.js?v=202610051823"></script>
+<script src="js/comparar.js?v=20261005"></script>
+<script src="js/app.js?v=20261005"></script>
 </body>
 </html>

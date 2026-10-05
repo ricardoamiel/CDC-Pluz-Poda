@@ -30,6 +30,8 @@
 
   const DATOS = window.DATOS_PLUZ;
   const META = DATOS.meta;
+  // Periodo que cubren los datos, escrito por el pipeline en cada actualización.
+  const [INICIO_DATOS, FIN_DATOS] = META.periodo_datos || ["enero de 2024", "agosto de 2026"];
   // Límite administrativo y avenidas de Los Olivos, de OpenStreetMap.
   const GEO = window.GEO_LOS_OLIVOS;
 
@@ -80,6 +82,15 @@
   const pct = (v) => (v === null || v === undefined ? "-" : Math.round(v * 100) + " %");
 
   const $ = (sel) => document.querySelector(sel);
+
+  // Cero meses es una poda registrada en el mismo mes del corte. Un alimentador sin ninguna
+  // poda registrada lleva el tope de 24 meses solo para el cálculo, y aquí se dice tal cual
+  // en lugar de mostrar ese 24 como si fuera un dato.
+  function textoPoda(u, conUnidad = true) {
+    if (u.sin_registro_poda) return "sin poda registrada";
+    if (u.meses_sin_poda === 0) return "podado este mes";
+    return conUnidad ? `${miles(u.meses_sin_poda)} meses` : miles(u.meses_sin_poda);
+  }
 
   function leerTokens(nombres) {
     const estilo = getComputedStyle(document.querySelector(".viz-root"));
@@ -852,13 +863,24 @@
 
   /* ------------------------------------------------------------------ resumen */
 
+  // El SAIDI y las interrupciones son del alimentador. En la vista por subestación varias
+  // filas del plan comparten alimentador, así que se suman una sola vez por alimentador:
+  // sumar por fila contaría el mismo alimentador tantas veces como subestaciones tenga.
+  function alimentadoresDe(lista) {
+    return Array.from(new Set(lista.map(alimentadorDe)))
+      .map((id) => porAlimentador.get(id)).filter(Boolean);
+  }
+
   function dibujarResumen() {
     const sel = seleccion();
     const us = unidades();
     const totalClientes = d3.sum(us, (d) => d.clientes);
-    const totalKva = d3.sum(us, (d) => d.kva);
     const clientes = d3.sum(sel, (d) => d.clientes);
-    const kva = d3.sum(sel, (d) => d.kva);
+    const alimPlan = alimentadoresDe(sel);
+    const saidiPlan = d3.sum(alimPlan, (d) => d.saidi_ltm);
+    const saidiTotal = d3.sum(DATOS.alimentadores, (d) => d.saidi_ltm);
+    const intPlan = d3.sum(alimPlan, (d) => d.interrupciones_12m);
+    const intHist = d3.sum(alimPlan, (d) => d.interrupciones_hist);
 
     $("#kpi-unidades").textContent = sel.length;
     $("#kpi-unidades-et").textContent =
@@ -870,13 +892,13 @@
     $("#kpi-clientes-pie").textContent = totalClientes
       ? `${coma((clientes / totalClientes) * 100, 0)} % de los clientes del piloto` : "-";
 
-    $("#kpi-kva").innerHTML = miles(kva) + '<span class="unidad">kVA</span>';
-    $("#kpi-kva-pie").textContent = totalKva
-      ? `${coma((kva / totalKva) * 100, 0)} % de la potencia del piloto` : "-";
+    $("#kpi-saidi").textContent = coma(saidiPlan, 2);
+    $("#kpi-saidi-pie").textContent = saidiTotal
+      ? `${coma((saidiPlan / saidiTotal) * 100, 0)} % del SAIDI del piloto, ` +
+        `${alimPlan.length} ${alimPlan.length === 1 ? "alimentador" : "alimentadores"}` : "-";
 
-    $("#kpi-indice").textContent = sel.length ? coma(sel[sel.length - 1].indice, 0) : "-";
-    $("#kpi-indice-pie").textContent = sel.length
-      ? `la unidad ${sel[sel.length - 1].id} cierra el plan` : "-";
+    $("#kpi-interrupciones").textContent = miles(intPlan);
+    $("#kpi-interrupciones-pie").textContent = `${miles(intHist)} desde ${INICIO_DATOS}`;
   }
 
   /* -------------------------------------------------------------------- curva */
@@ -1084,9 +1106,9 @@
       "</div>" +
       "<dl>" +
       `<dt>Riesgo a 3 meses</dt><dd>${pct(u.probabilidad)}</dd>` +
-      `<dt>Sin poda</dt><dd>${miles(u.meses_sin_poda)} meses</dd>` +
+      `<dt>Sin poda</dt><dd>${textoPoda(u)}</dd>` +
       `<dt>Clientes</dt><dd>${miles(u.clientes)}</dd>` +
-      `<dt>Potencia</dt><dd>${miles(u.kva)} kVA</dd>` +
+      `<dt>Interrupciones, último año</dt><dd>${miles(u.interrupciones_12m)}</dd>` +
       "</dl>" +
       (enPlan ? `<span class="pastilla">${icono("i-tilde")}Entra al plan</span>` : "");
     ficha.hidden = false;
@@ -1177,9 +1199,9 @@
         </div>
         <dl>
           <dt>${icono("i-medidor")}Riesgo estimado a 3 meses</dt><dd>${pct(u.probabilidad)}</dd>
-          <dt>${icono("i-reloj")}Meses desde la última poda</dt><dd>${miles(u.meses_sin_poda)}</dd>
+          <dt>${icono("i-reloj")}Meses desde la última poda</dt><dd>${textoPoda(u, false)}</dd>
           <dt>${icono("i-clientes")}Clientes de baja tensión</dt><dd>${miles(u.clientes)}</dd>
-          <dt>${icono("i-rayo")}Potencia instalada</dt><dd>${miles(u.kva)} kVA</dd>
+          <dt>${icono("i-alerta")}Interrupciones del alimentador, último año</dt><dd>${miles(u.interrupciones_12m)}</dd>
           ${identidad}
         </dl>
       </div>
@@ -1203,7 +1225,8 @@
         <ul class="motivos">${motivos}</ul>
         <dl>
           <dt>${icono("i-alerta")}Eventos históricos del alimentador</dt><dd>${alimentador ? alimentador.eventos_historicos : "-"}</dd>
-          <dt>${icono("i-reloj")}Eventos del último año</dt><dd>${alimentador ? alimentador.eventos_12m : "-"}</dd>
+          <dt>${icono("i-reloj")}Eventos por vegetación del último año</dt><dd>${alimentador ? alimentador.eventos_12m : "-"}</dd>
+          <dt>${icono("i-alerta")}Interrupciones desde ${INICIO_DATOS}</dt><dd>${alimentador ? miles(alimentador.interrupciones_hist) : "-"}</dd>
           <dt>${icono("i-medidor")}SAIDI de los últimos 12 meses</dt><dd>${alimentador ? coma(alimentador.saidi_ltm, 2) : "-"}</dd>
         </dl>
       </div>`;
@@ -1219,14 +1242,16 @@
     const sel = seleccion();
     const encabezado = estado.nivel === "alimentadores"
       ? ["puesto", "alimentador", "indice", "riesgo_3_meses", "meses_sin_poda",
-         "clientes", "kva", "sed_aereas", "motivos"]
+         "sin_registro_poda", "clientes", "saidi_ultimo_anio", "interrupciones_ultimo_anio", "sed_aereas", "motivos"]
       : ["puesto", "subestacion", "alimentador", "direccion", "indice",
-         "riesgo_3_meses", "meses_sin_poda", "clientes", "kva"];
+         "riesgo_3_meses", "meses_sin_poda", "clientes", "saidi_alimentador_ultimo_anio",
+         "interrupciones_alimentador_ultimo_anio"];
     const filas = sel.map((d) => estado.nivel === "alimentadores"
-      ? [d.puesto, d.id, d.indice, d.probabilidad, d.meses_sin_poda, d.clientes,
-         d.kva, d.sed_aereas, (d.motivos || []).join(" | ")]
+      ? [d.puesto, d.id, d.indice, d.probabilidad, d.meses_sin_poda,
+         d.sin_registro_poda ? "si" : "no", d.clientes,
+         d.saidi_ltm, d.interrupciones_12m, d.sed_aereas, (d.motivos || []).join(" | ")]
       : [d.puesto, d.id, d.alimentador, d.direccion, d.indice, d.probabilidad,
-         d.meses_sin_poda, d.clientes, d.kva]);
+         d.meses_sin_poda, d.clientes, d.saidi_ltm, d.interrupciones_12m]);
     const escapar = (v) => {
       const s = String(v === null || v === undefined ? "" : v);
       return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
@@ -1318,23 +1343,58 @@
     const siguiente = actual ? (actual === "dark" ? "light" : "dark") : (oscuro ? "light" : "dark");
     document.documentElement.setAttribute("data-theme", siguiente);
     iconoTema();
-    actualizar();
+    if (vistaActual() === "comparar") window.COMPARADOR.dibujar();
+    else actualizar();
   });
 
+  // El mapa se mide con el ancho de su caja, y una pestaña oculta mide cero: al cambiar el
+  // tamaño de la ventana solo se redibuja la vista que se está viendo, y la otra se
+  // redibuja al volver a ella.
+  const vistaActual = () => ($("#vista-comparar").hidden ? "piloto" : "comparar");
   let temporizador = null;
   window.addEventListener("resize", () => {
     clearTimeout(temporizador);
-    temporizador = setTimeout(() => actualizar({ regeometrizar: true }), 140);
+    temporizador = setTimeout(() => {
+      if (vistaActual() === "piloto") actualizar({ regeometrizar: true });
+      else if (window.COMPARADOR) window.COMPARADOR.dibujar();
+    }, 140);
+  });
+
+  function mostrarVista(vista) {
+    const comparar = vista === "comparar";
+    $("#vista-piloto").hidden = comparar;
+    $("#vista-comparar").hidden = !comparar;
+    d3.select("#pestana-piloto").classed("activa", !comparar).attr("aria-selected", String(!comparar));
+    d3.select("#pestana-comparar").classed("activa", comparar).attr("aria-selected", String(comparar));
+    ficha.hidden = true;
+    if (comparar) window.COMPARADOR.dibujar();
+    else actualizar({ regeometrizar: true });
+    // La vista queda en la dirección para poder compartir el enlace tal como se está viendo.
+    const p = new URLSearchParams(location.search);
+    if (comparar) p.set("vista", "comparar"); else p.delete("vista");
+    history.replaceState(null, "", location.pathname + (p.toString() ? "?" + p : ""));
+  }
+  $("#pestana-piloto").addEventListener("click", () => mostrarVista("piloto"));
+  $("#pestana-comparar").addEventListener("click", () => mostrarVista("comparar"));
+  // Flechas entre pestañas, como pide el patrón de pestañas accesibles.
+  d3.select(".pestanas").on("keydown", (evento) => {
+    if (evento.key !== "ArrowLeft" && evento.key !== "ArrowRight") return;
+    const siguiente = vistaActual() === "piloto" ? "comparar" : "piloto";
+    mostrarVista(siguiente);
+    $("#pestana-" + siguiente).focus();
   });
 
   /* ------------------------------------------------------------------ arranque */
 
   $("#ventana").textContent = META.ventana;
+  document.querySelectorAll(".periodo-inicio").forEach((e) => { e.textContent = INICIO_DATOS; });
+  document.querySelectorAll(".periodo-fin").forEach((e) => { e.textContent = FIN_DATOS; });
   $("#sello-corte").querySelector("span").textContent = `Corte ${META.corte}`;
   $("#pie-meta").textContent =
     `Corte de datos ${META.corte}. Modelo: ${META.modelo}. ` +
     `${META.n_alimentadores} alimentadores, ${META.n_subestaciones} subestaciones aéreas y ` +
-    `${META.n_no_expuestas} subestaciones no expuestas. Generado el ${META.generado}.`;
+    `${META.n_no_expuestas} subestaciones no expuestas. Generado el ${META.generado}. ` +
+    `La comparación cubre ${window.DATOS_DISTRITOS ? window.DATOS_DISTRITOS.orden.length : 0} distritos de Lima Norte.`;
 
   // La página abre con la unidad más crítica ya fijada, para que el panel de detalle
   // muestre desde el principio qué información entrega y no haya que descubrirlo.
@@ -1354,4 +1414,6 @@
   dibujarResumen();
   dibujarCurva();
   dibujarDetalle();
+
+  if (parametros.get("vista") === "comparar") mostrarVista("comparar");
 })();
