@@ -9,3 +9,7 @@ pipeline/salidas/
 __pycache__/
 *.pyc
 .venv/
+
+# Contexto interno del proyecto: evaluaciones, acuerdos con Pluz y observaciones del curso.
+# No se publica porque el repositorio es público.
+Readme-contexto.md

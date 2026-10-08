@@ -102,14 +102,19 @@ MESES_EMBARGO = 3            # separación entre entrenamiento y prueba
 C_REGULARIZACION = 0.05      # elegido en la fase 4 con validación de origen móvil
 SEMILLA = 20261005
 
-# Acuerdo de la reunión N°3: sin SAIDI ni clientes dentro de la probabilidad, porque los
-# dos ya entran al índice como componentes propios.
-VARIABLES = ["log_veg_hist", "log_veg_12m", "meses_sin_poda", "log_eventos_12m",
-             "mes_sin", "mes_cos"]
+# Acuerdos de la reunión N°3: la probabilidad no usa ninguna de las tres variables que el
+# índice ya cuenta por su lado (reloj de poda, SAIDI y exposición por clientes y potencia),
+# para no contar dos veces el mismo criterio. Sí usa el número de interrupciones del
+# alimentador, que Pluz pidió como indicador principal. Los meses desde la última poda
+# salieron en la segunda revisión; en la fase 4 su aporte incremental ya era nulo.
+VARIABLES = ["log_veg_hist", "log_veg_12m", "log_eventos_12m", "mes_sin", "mes_cos"]
+
+# Variables del índice que no pueden entrar al modelo. El benchmark comprueba que ninguna
+# esté en VARIABLES y mide su correlación con las que sí están.
+VARIABLES_DEL_INDICE = ["meses_sin_poda", "saidi_ltm", "clientes", "kva"]
 NOMBRES_VARIABLES = {
     "log_veg_hist": "Historial acumulado de vegetación",
     "log_veg_12m": "Eventos de vegetación, 12 meses",
-    "meses_sin_poda": "Meses desde la última poda",
     "log_eventos_12m": "Interrupciones totales, 12 meses",
     "mes_sin": "Ciclo anual, seno",
     "mes_cos": "Ciclo anual, coseno",

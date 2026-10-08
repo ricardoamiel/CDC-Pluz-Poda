@@ -39,6 +39,13 @@
   const miles = (v) => (v === null || v === undefined ? "-"
     : String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, "."));
   const coma = (v, d = 1) => (v === null || v === undefined ? "-" : v.toFixed(d).replace(".", ","));
+  // Igual que en la pestaña del piloto: cero meses es una poda en el mismo mes del corte, y
+  // un alimentador fuera del registro de poda no tiene reloj.
+  function textoPoda(u) {
+    if (u.sin_registro_poda) return "sin poda registrada";
+    if (u.meses_sin_poda === 0) return "podado este mes";
+    return `${miles(u.meses_sin_poda)} meses`;
+  }
   const pct = (v) => (v === null || v === undefined ? "-" : Math.round(v * 100) + " %");
 
   function leerRampa() {
@@ -304,17 +311,17 @@
     const sub = estado.nivel === "alimentadores"
       ? `${u.sed_aereas} subestaciones aéreas`
       : `Alimentador ${u.alimentador}`;
-    const extra = estado.nivel === "alimentadores"
-      ? `<dt>SAIDI, último año</dt><dd>${coma(u.saidi_ltm, 2)}</dd>` +
-        `<dt>Interrupciones, último año</dt><dd>${miles(u.interrupciones_12m)}</dd>`
-      : `<dt>Dirección</dt><dd>${u.direccion}</dd>`;
     ficha.innerHTML =
       `<div class="ficha-tope"><h3>${u.id}</h3><span class="ficha-puesto">puesto ${u.puesto}</span></div>` +
       `<p class="ficha-sub">${sub}</p>` +
       `<div class="ficha-indice"><span class="ficha-chip" style="background:${escala(u.indice)}"></span>` +
       `<span class="ficha-indice-num">${coma(u.indice, 0)}</span><span class="ficha-indice-de">índice<br>de 100</span></div>` +
+      // Los mismos cinco datos y en el mismo orden que la ficha de la pestaña del piloto.
       `<dl><dt>Riesgo a 3 meses</dt><dd>${pct(u.probabilidad)}</dd>` +
-      `<dt>Clientes</dt><dd>${miles(u.clientes)}</dd>${extra}</dl>` +
+      `<dt>Sin poda</dt><dd>${textoPoda(u)}</dd>` +
+      `<dt>Clientes</dt><dd>${miles(u.clientes)}</dd>` +
+      `<dt>SAIDI, último año</dt><dd>${coma(u.saidi_ltm, 2)}</dd>` +
+      `<dt>Interrupciones, último año</dt><dd>${miles(u.interrupciones_12m)}</dd></dl>` +
       (enPlan.has(u.id) ? '<span class="pastilla">Entra al plan</span>' : "");
     ficha.hidden = false;
     moverFicha(lado_, evento);

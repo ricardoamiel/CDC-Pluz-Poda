@@ -1108,6 +1108,7 @@
       `<dt>Riesgo a 3 meses</dt><dd>${pct(u.probabilidad)}</dd>` +
       `<dt>Sin poda</dt><dd>${textoPoda(u)}</dd>` +
       `<dt>Clientes</dt><dd>${miles(u.clientes)}</dd>` +
+      `<dt>SAIDI, último año</dt><dd>${coma(u.saidi_ltm, 2)}</dd>` +
       `<dt>Interrupciones, último año</dt><dd>${miles(u.interrupciones_12m)}</dd>` +
       "</dl>" +
       (enPlan ? `<span class="pastilla">${icono("i-tilde")}Entra al plan</span>` : "");

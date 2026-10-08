@@ -42,10 +42,25 @@ Los filtros no cambian el plan. El plan lo fija siempre el tamaño elegido: filt
 
 * El encabezado lleva el piloto de Los Olivos de forma explícita.
 * Los indicadores de potencia instalada y de índice mínimo se reemplazan por el SAIDI y las interrupciones del último año. La potencia sigue dentro del componente de exposición del índice, pero como cifra suelta no informaba la decisión, y el índice mínimo ya se lee en la lista priorizada.
-* La probabilidad ya no usa el SAIDI ni el número de clientes, que entran al índice como componentes propios y se estaban contando dos veces. El desempeño fuera de muestra no cambia de forma distinguible, y los diez primeros alimentadores del piloto son los mismos.
+* La probabilidad ya no usa ninguna de las tres variables del índice de criticidad: ni el SAIDI, ni el número de clientes y la potencia, ni los meses desde la última poda, que salieron en una segunda revisión. Se estaban contando dos veces. El desempeño fuera de muestra no cambia de forma distinguible, y los diez primeros alimentadores del piloto son los mismos.
+* Benchmark de ocho modelos con reporte interactivo en D3 y registro en MLflow, y documento de arquitectura con dos propuestas de automatización.
 * Nueva pestaña de comparación entre distritos, con la guía de subestaciones de junio de 2026, que cubre toda la concesión.
 * Los meses desde la última poda distinguen dos casos que antes se confundían. Un alimentador podado en el mismo mes del corte aparece como «podado este mes». Uno que no figura en el registro de poda, que empieza en enero de 2025, aparece como «sin poda registrada»; antes este segundo caso se mostraba como 24 meses, que es solo el tope que usa el cálculo. El detalle está en pipeline/README.md.
 * Los datos se actualizan con un pipeline automático, y las fechas que muestra la página salen de los propios datos.
+
+
+## Modelo y benchmark
+
+La probabilidad de interferencia a tres meses sale de una regresión logística con el historial de vegetación, la vegetación de los últimos doce meses, las interrupciones de los últimos doce meses y la estacionalidad. No usa ninguna de las tres variables que el índice ya cuenta por su lado: reloj de poda, SAIDI y exposición por clientes y potencia. En la segunda revisión de la reunión N°3 se comparó con la regresión logística ponderada, el refuerzo de gradiente, Random Forest, XGBoost, LightGBM y SVM: ninguno la supera de forma distinguible, de modo que se mantiene por simple, calibrada y explicable. El detalle, y cómo correr el benchmark y verlo en MLflow, está en pipeline/README.md.
+
+
+## Arquitectura para la operación
+
+Dos propuestas para que la herramienta se actualice sola con cada lote semanal de Pluz, con el mismo pipeline: en las instalaciones de la empresa y en AWS. El detalle está en ARQUITECTURA.md.
+
+![Arquitectura en las instalaciones de Pluz](docs/arquitectura_en_las_instalaciones.svg)
+
+![Arquitectura en AWS](docs/arquitectura_aws.svg)
 
 
 ## Cómo se abre
@@ -102,6 +117,8 @@ No hace falta ningún paso de compilación ni ningún servidor de aplicaciones. 
 * **data.** Lo que carga la página: criticidad del piloto, datos de los ocho distritos y geografía. Cada archivo va en dos copias con el mismo contenido: la de extensión js la carga la página, y la de extensión json sirve para reutilizar los datos.
 * **assets.** Logotipo completo, isotipo e icono de pestaña.
 * **pipeline.** Flujo de datos, del lote de Pluz a la carpeta data. Se documenta en pipeline/README.md.
+* **docs.** Diagramas de arquitectura en SVG y el generador que los dibuja.
+* **ARQUITECTURA.md.** Propuestas para la operación, en las instalaciones de Pluz y en AWS.
 
 
 ## Decisiones de diseño

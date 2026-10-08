@@ -179,6 +179,7 @@ def publicar(distritos):
     # La comparación no abre la ficha completa de cada subestación: basta con lo que se
     # muestra al pasar el puntero, y así el archivo baja a la mitad.
     campos_sed = ("id", "alimentador", "puesto", "indice", "probabilidad", "clientes",
+                  "meses_sin_poda", "sin_registro_poda", "saidi_ltm", "interrupciones_12m",
                   "direccion", "lon", "lat")
     ligeros = {c: {**v, "subestaciones": [{k: s[k] for k in campos_sed}
                                          for s in v["subestaciones"]]}

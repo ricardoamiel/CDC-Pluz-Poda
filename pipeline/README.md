@@ -49,6 +49,8 @@ Todas las órdenes disponibles:
 * **subir.** Publica la carpeta data en GitHub.
 * **geografia.** Vuelve a descargar los límites de los distritos de OpenStreetMap.
 * **instalar.** Instala las bibliotecas. Con instalar base agrega las de la base de datos.
+* **benchmark.** Compara modelos y genera el reporte interactivo en pipeline/salidas/benchmark.
+* **mlflow.** Abre MLflow con las corridas del benchmark.
 
 
 ## Contrato de datos
@@ -78,7 +80,7 @@ Cada fuente se reconoce por el nombre del archivo, sin distinguir mayúsculas ni
 
 **El objetivo.** Vale 1 si el alimentador registra al menos un evento de crecimiento de árbol, tala de árbol o causa no ubicada en red aérea en los tres meses siguientes. La causa no ubicada en red aérea entra por el acuerdo de la reunión N°2.
 
-**Las variables del modelo.** Historial acumulado de vegetación, eventos de vegetación de los últimos doce meses, meses desde la última poda, interrupciones totales de los últimos doce meses y estacionalidad. El SAIDI y el número de clientes no entran, por el acuerdo de la reunión N°3: ya están en el índice como componentes propios y se contarían dos veces.
+**Las variables del modelo.** Historial acumulado de vegetación, eventos de vegetación de los últimos doce meses, interrupciones totales de los últimos doce meses y estacionalidad. Por los acuerdos de la reunión N°3, el modelo no usa ninguna de las tres variables que el índice de criticidad ya cuenta por su lado: el reloj de poda, que son los meses desde la última poda; la criticidad por SAIDI; y la exposición por clientes y potencia instalada. Así no se cuenta dos veces el mismo criterio. Las interrupciones sí entran, porque Pluz las pidió como indicador principal, aunque tienen una correlación de 0,82 con el SAIDI; el benchmark lo mide en cada corrida.
 
 **Medir antes de publicar.** En cada corrida el modelo se entrena con los meses antiguos, deja tres meses de separación y se prueba con los últimos cinco meses que ya tienen su ventana completa, contra la regla por historial, que es lo que Pluz podría hacer hoy sin modelo. Después se reentrena con todos los meses que ya tienen resultado, y ese es el modelo que predice. Si en la prueba queda más de 10 puntos de cobertura por debajo de la regla, la corrida no publica: algo cambió en los datos y alguien tiene que revisarlo antes de que llegue a la página.
 
@@ -107,49 +109,27 @@ El repositorio es público porque lo sirve GitHub Pages. Por eso el archivo .git
 * **Cambiar los pesos del índice o el horizonte.** PESOS y HORIZONTE_MESES en pipeline/config.py.
 
 
-## Arquitectura propuesta para la operación
+## Benchmark de modelos
 
-### El punto de partida
+```
+python pipeline/actualizar.py benchmark
+python pipeline/actualizar.py mlflow
+```
 
-Antes de elegir herramientas conviene fijar tres hechos, porque son los que deciden:
+La primera orden compara, con la misma partición temporal del pipeline, la regla por historial, la regresión logística vigente, la regresión logística ponderada, el refuerzo de gradiente de histograma, Random Forest, XGBoost, LightGBM y SVM. Los hiperparámetros y el umbral de cada modelo se eligen en una validación interna, separada de la prueba por tres meses, y la prueba no interviene en ninguna elección. Escribe un reporte interactivo con D3 en pipeline/salidas/benchmark/benchmark_modelos.html, que se abre sin conexión, y registra cada modelo en MLflow. La segunda orden abre MLflow en el navegador.
 
-1. **El volumen es pequeño.** Unas 200 interrupciones al mes, unos cuantos cientos de podas al mes y una guía de unas 14.000 subestaciones. Todo el histórico cabe en menos de 20 MB. Cualquier base de datos lo maneja sin esfuerzo, y el cálculo completo tarda segundos en un computador de oficina.
-2. **La frecuencia es semanal.** No hace falta procesar en tiempo real: un proceso por lotes, una vez por semana, es la arquitectura que corresponde.
-3. **El equipo de Pluz trabaja en Excel.** La solución tiene que respetar esa forma de trabajo: el área entrega un Excel y recibe un Excel y una página, sin aprender una herramienta nueva.
+El reporte incluye la tabla de métricas (ROC AUC, PR AUC, Brier, pérdida logarítmica, precisión, exhaustividad, F1, F2 y cobertura de las listas de 20, 40 y 80), las curvas ROC y de precisión y exhaustividad, la calibración, las curvas de pérdida por iteración y de aprendizaje, las matrices de confusión, la correlación entre las variables del modelo y las del índice, el aporte de cada bloque de variables y ejemplos reales de verdaderos y falsos positivos y negativos contrastados con lo que pasó.
 
-### Opciones evaluadas
+**Qué se minimiza.** Un falso negativo es un alimentador que quedó fuera del plan y tuvo una interferencia: corte de servicio, minutos de SAIDI, clientes afectados, posibles multas y riesgo de seguridad. Un falso positivo es una visita de cuadrilla que todavía no hacía falta. Por eso se privilegia la exhaustividad, pero dentro de la capacidad de las cuadrillas: la métrica que decide es la cobertura de la lista mensual, y el umbral se elige maximizando F2.
 
-* **Access.** Descartado. Tiene un límite de 2 GB por archivo, funciona mal con varios usuarios a la vez, solo corre en Windows, no maneja coordenadas y Microsoft ya no lo desarrolla como plataforma de datos. Además, nuestro equipo no lo usa, de modo que no podríamos dejarlo listo ni darle soporte.
-* **Seguir solo con Excel y carpetas.** Es lo que funciona hoy y sirve para el piloto, pero no guarda historial: cada lote reemplaza al anterior, y no se puede comprobar después si el plan de un trimestre acertó.
-* **Base de datos en sus propias instalaciones con PostgreSQL.** Es la opción recomendada, y se detalla abajo.
-* **Nube con AWS.** Técnicamente impecable, pero sobredimensionada para este volumen en esta etapa. Se detalla abajo como fase posterior.
-* **Orquestadores como Airflow, o plataformas como Databricks.** Descartados. Resuelven problemas de cientos de procesos y terabytes, y aquí hay un proceso semanal de megabytes; su costo de operación superaría al del problema.
+**Regla de decisión.** Otro modelo reemplaza a la regresión logística solo si la supera en la cobertura de la lista de 40 con un intervalo que no cruza el cero al remuestrear alimentadores. En empate se queda la regresión logística, que es la más simple, está calibrada y se explica sin traducción.
 
-### Recomendación: lotes semanales en las instalaciones de Pluz
+**Resultado con los datos al corte de agosto de 2026.** Ningún modelo supera a la regresión logística de forma distinguible. Random Forest logra la cobertura más alta, 24,8 % frente a 23,7 %, con un intervalo que cruza el cero; XGBoost y LightGBM quedan por debajo, y SVM pierde calibración y capacidad de ordenamiento. Se mantiene la regresión logística.
 
-Cuatro piezas, todas gratuitas o ya disponibles en una empresa como Pluz:
 
-1. **Entrada.** Una carpeta compartida, en OneDrive o SharePoint si usan Microsoft 365, o en una unidad de red. El área deja ahí el Excel semanal, igual que hoy lo envía por correo. Es lo único que cambia para ellos.
-2. **Proceso.** Este mismo pipeline, instalado en un servidor o en un computador de la Subgerencia, programado con el Programador de tareas de Windows para correr cada lunes. No hay que reescribir nada: la orden programada es python pipeline/actualizar.py.
-3. **Almacenamiento.** PostgreSQL, con la extensión PostGIS para las coordenadas de las subestaciones. Se elige por cinco razones: es gratuito y de código abierto; es un estándar que cualquier área de sistemas sabe administrar; guarda el historial de predicciones, que es lo que permitirá medir si el plan acertó; varias personas pueden consultarlo a la vez; y se conecta directamente con Excel y con Power BI. Si el área de sistemas de Pluz ya trabaja con Microsoft, SQL Server Express es una alternativa equivalente y también gratuita hasta 10 GB: el pipeline escribe en cualquiera de las dos cambiando solo la dirección de conexión.
-4. **Consumo.** Tres salidas para tres usos: la página, para la reunión y la decisión; el libro de Excel del plan, para la programación de cuadrillas; y Excel o Power BI conectados a la base de datos, desde Datos, Obtener datos, Desde una base de datos, para quien quiera cruzar la información con sus propias planillas.
+## Arquitectura para la operación
 
-Sobre la publicación de la página: hoy vive en GitHub Pages, que es público y sirve para el prototipo. En operación debería servirse dentro de la red de Pluz, porque los datos que dibuja incluyen direcciones de subestaciones y número de clientes. Como es una página estática, basta con copiar la carpeta a un servidor web interno o a un sitio de SharePoint; no necesita servidor de aplicaciones.
-
-### Lo que dejamos listo y lo que pone Pluz
-
-Queda listo en este repositorio:
-
-* El pipeline completo, con validación del lote, medición del modelo antes de publicar y reporte de cada corrida.
-* El plan en Excel, en pipeline/salidas/plan_de_poda_AAAAMM.xlsx, con una hoja de resumen y el plan de cada distrito en los dos niveles.
-* La escritura en base de datos, ya probada con SQLite, que es una base de datos en un solo archivo y no requiere instalar nada. Sirve como primer paso antes de tener un servidor.
-* Esta documentación.
-
-Le corresponde a Pluz:
-
-* Un computador o servidor donde corra el proceso, y la carpeta compartida de entrada.
-* La instalación de PostgreSQL o SQL Server, normalmente a cargo de su área de sistemas.
-* La decisión de dónde se sirve la página dentro de su red.
+Las dos propuestas, en las instalaciones de Pluz y en AWS, con sus diagramas, las mejoras sobre la propuesta inicial de AWS y la comparación entre ambas, están en ARQUITECTURA.md, en la raíz del repositorio.
 
 ### Cómo conectar la base de datos
 
@@ -167,16 +147,7 @@ Le corresponde a Pluz:
    ```
 3. Correr la actualización como siempre. Al terminar, el pipeline informa si la base quedó actualizada.
 
-Las tablas que escribe son de dos tipos:
-
-* **Se reemplazan en cada corrida**, porque son la versión consolidada vigente: interrupciones, poda, guia_sed, ranking_saidi y base_analitica.
-* **Se acumulan con la fecha de la corrida**, porque son el historial con el que se medirá si el plan acertó: historial_predicciones, historial_indice_alimentador, historial_indice_subestacion y corridas.
-
-### Cuándo pasar a la nube
-
-AWS, o Azure si Pluz trabaja con Microsoft, tiene sentido en una fase posterior, cuando se cumpla alguna de estas condiciones: que la herramienta se extienda a toda la concesión con datos diarios, que varias áreas la consuman, o que el área de sistemas de Pluz ya tenga un acuerdo de nube y prefiera no mantener servidores propios.
-
-El diseño en AWS sería el mismo flujo con piezas administradas: el Excel se deja en un depósito de Amazon S3; su llegada dispara el pipeline, empaquetado en un contenedor que corre en AWS Fargate o en AWS Lambda; los resultados se guardan en Amazon RDS para PostgreSQL; y la página se sirve desde S3 con Amazon CloudFront y acceso restringido con Amazon Cognito. El costo es bajo pero recurrente, y lo domina la base de datos administrada. El paso es directo porque el pipeline ya está escrito para ese flujo: solo cambian la carpeta de entrada y la dirección de la base de datos.
+Las tablas que se reemplazan en cada corrida son interrupciones, poda, guia_sed, ranking_saidi y base_analitica. Las que se acumulan con la fecha de la corrida, porque son el historial con el que se medirá si el plan acertó, son historial_predicciones, historial_indice_alimentador, historial_indice_subestacion y corridas.
 
 
 ## Límites conocidos

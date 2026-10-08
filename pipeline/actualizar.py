@@ -12,6 +12,8 @@ Uso, desde la raíz del repositorio:
     python pipeline/actualizar.py geografia  vuelve a bajar los límites de los distritos
     python pipeline/actualizar.py instalar   instala las bibliotecas, una sola vez
     python pipeline/actualizar.py instalar base   agrega las de la base de datos PostgreSQL
+    python pipeline/actualizar.py benchmark  compara modelos y genera el reporte interactivo
+    python pipeline/actualizar.py mlflow     abre MLflow con las corridas del benchmark
 
 Etapas de la corrida completa:
     1. fuentes          localiza los archivos en los lotes y valida columnas
@@ -32,7 +34,8 @@ sys.path.insert(0, str(PIPELINE))
 
 import config  # noqa: E402
 
-ORDENES = ["completa", "validar", "calcular", "forzar", "ver", "subir", "geografia", "instalar"]
+ORDENES = ["completa", "validar", "calcular", "forzar", "ver", "subir", "geografia", "instalar",
+           "benchmark", "mlflow"]
 
 # Si el modelo queda claramente peor que la regla por historial, la corrida no publica:
 # algo cambió en los datos y alguien tiene que revisarlo antes de que llegue a la página.
@@ -184,6 +187,44 @@ def corrida(publicar=True, forzar=False):
         print("Siguiente paso: revisar con la orden ver y publicar con la orden subir.")
 
 
+def benchmark():
+    """Compara modelos con la partición del pipeline y escribe el reporte interactivo."""
+    from etapas import fuentes, base_analitica, benchmark as bm, reporte_benchmark
+
+    paso("Benchmark de modelos: fuentes y base analítica")
+    tablas, _ = fuentes.cargar_todo()
+    panel, corte, inicio = base_analitica.construir(tablas)
+
+    # Variables del índice en el último corte, para medir su relación con las del modelo.
+    guia = tablas["guia"]
+    expo = guia[guia["aerea"]].groupby("ALIM").agg(clientes=("clientes", "sum"), kva=("kva", "sum"))
+    operativo = panel[panel["periodo"] == corte].copy()
+    operativo["saidi_ltm"] = operativo["alimentador"].map(tablas["saidi_ltm"])
+    operativo = operativo.join(expo, on="alimentador")
+
+    paso("Entrenando y evaluando los modelos")
+    resultados = bm.ejecutar(panel, inicio, corte, operativo)
+    carpeta = config.SALIDAS / "benchmark"
+    carpeta.mkdir(parents=True, exist_ok=True)
+    reporte = reporte_benchmark.escribir(resultados, carpeta / "benchmark_modelos.html")
+    uri = bm.registrar_mlflow(resultados, reporte)
+    print(f"\nModelo recomendado: {resultados['decision']['modelo']}")
+    print(f"Reporte: {reporte}")
+    print("Corridas en MLflow: abrir con la orden mlflow" if uri else "MLflow no está instalado")
+    webbrowser.open(reporte.as_uri())
+
+
+def abrir_mlflow(puerto=5000):
+    base = config.SALIDAS / "mlflow.db"
+    if not base.exists():
+        print("Primero hay que correr la orden benchmark.")
+        return
+    print(f"MLflow en http://127.0.0.1:{puerto}. Cierre con Ctrl y C.")
+    webbrowser.open(f"http://127.0.0.1:{puerto}")
+    subprocess.run([sys.executable, "-m", "mlflow", "ui", "--backend-store-uri", f"sqlite:///{base}",
+                    "--port", str(puerto)], cwd=config.SALIDAS)
+
+
 def ver(puerto=8000):
     """Sirve el repositorio en local y abre la página."""
     import functools
@@ -232,6 +273,10 @@ def main():
         geografia.descargar()
     elif orden == "ver":
         ver()
+    elif orden == "benchmark":
+        benchmark()
+    elif orden == "mlflow":
+        abrir_mlflow()
     elif orden == "subir":
         subir()
     elif orden == "validar":
