@@ -119,6 +119,19 @@ NOMBRES_VARIABLES = {
     "mes_sin": "Ciclo anual, seno",
     "mes_cos": "Ciclo anual, coseno",
 }
+# Nombres de las variables candidatas que evalúa la ablación del benchmark.
+NOMBRES_CANDIDATAS = {
+    "meses_desde_veg": "Meses desde el último evento de vegetación",
+    "sin_evento_previo": "Sin evento previo de vegetación",
+    "log_veg_3m": "Eventos de vegetación, 3 meses",
+    "log_eventos_3m": "Interrupciones totales, 3 meses",
+}
+
+# El punto de operación del modelo es cuántos alimentadores se marcan en alerta cada mes.
+# Se elige en la validación interna: el menor número de alertas que alcanza esta fracción
+# del F2 máximo. Pasado ese punto, cada alerta adicional agrega casi solo falsos positivos.
+FRACCION_F2_MAXIMO = 0.99
+
 MOTIVOS = {
     "log_veg_hist": "historial de eventos por vegetación",
     "log_veg_12m": "eventos por vegetación en el último año",

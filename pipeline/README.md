@@ -120,11 +120,20 @@ La primera orden compara, con la misma partición temporal del pipeline, la regl
 
 El reporte incluye la tabla de métricas (ROC AUC, PR AUC, Brier, pérdida logarítmica, precisión, exhaustividad, F1, F2 y cobertura de las listas de 20, 40 y 80), las curvas ROC y de precisión y exhaustividad, la calibración, las curvas de pérdida por iteración y de aprendizaje, las matrices de confusión, la correlación entre las variables del modelo y las del índice, el aporte de cada bloque de variables y ejemplos reales de verdaderos y falsos positivos y negativos contrastados con lo que pasó.
 
-**Qué se minimiza.** Un falso negativo es un alimentador que quedó fuera del plan y tuvo una interferencia: corte de servicio, minutos de SAIDI, clientes afectados, posibles multas y riesgo de seguridad. Un falso positivo es una visita de cuadrilla que todavía no hacía falta. Por eso se privilegia la exhaustividad, pero dentro de la capacidad de las cuadrillas: la métrica que decide es la cobertura de la lista mensual, y el umbral se elige maximizando F2.
+**Qué se minimiza.** Un falso negativo es un alimentador que quedó fuera del plan y tuvo una interferencia: corte de servicio, minutos de SAIDI, clientes afectados, posibles multas y riesgo de seguridad. Un falso positivo es una visita de cuadrilla que todavía no hacía falta, pero no es trabajo perdido: es poda preventiva adelantada sobre alimentadores que el historial ya señala como expuestos. Por eso se privilegia la exhaustividad, dentro de la capacidad de las cuadrillas.
 
-**Regla de decisión.** Otro modelo reemplaza a la regresión logística solo si la supera en la cobertura de la lista de 40 con un intervalo que no cruza el cero al remuestrear alimentadores. En empate se queda la regresión logística, que es la más simple, está calibrada y se explica sin traducción.
+**Punto de operación.** Los falsos positivos dependen sobre todo de cuántos alimentadores se marcan en alerta, no del modelo. Por eso el punto de operación se fija como un número de alertas por mes, igual para todos los modelos, y no como una probabilidad: una probabilidad elegida en la validación no se traslada al modelo final, que se entrena con más meses y cambia de escala. Se elige en la validación interna como el menor número de alertas que alcanza el 99 % del F2 máximo, porque pasado ese punto cada alerta adicional agrega casi solo falsos positivos. La fracción se ajusta en FRACCION_F2_MAXIMO, en config.py.
 
-**Resultado con los datos al corte de agosto de 2026.** Ningún modelo supera a la regresión logística de forma distinguible. Random Forest logra la cobertura más alta, 24,8 % frente a 23,7 %, con un intervalo que cruza el cero; XGBoost y LightGBM quedan por debajo, y SVM pierde calibración y capacidad de ordenamiento. Se mantiene la regresión logística.
+**Regla de decisión.** El modelo se usa para ordenar una lista, así que decide la métrica de ordenamiento, y con clases desbalanceadas la más informativa es la PR AUC. Otro modelo reemplaza a la regresión logística solo si la supera en la PR AUC con un intervalo que no cruza el cero al remuestrear alimentadores. En empate se queda la regresión logística, que es la más simple, está calibrada y se explica sin traducción.
+
+**Ablaciones.** El benchmark prueba también variantes de la regresión logística: con recencia del último evento de vegetación, con tendencia de tres meses, con ambas y con relaciones no lineales mediante splines. Cada una elige su regularización en la validación, y la base solo se cambia si otra la supera ahí por más de 0,005 de PR AUC. Además mide el aporte de cada bloque de variables y la tabla del punto de operación de la regresión logística, con los falsos positivos y negativos de cada número de alertas.
+
+**Resultado con los datos al corte de agosto de 2026.**
+
+* Ningún modelo supera a la regresión logística. Tiene la PR AUC más alta, 0,401, empatada con Random Forest, y una ROC AUC de 0,758, prácticamente igual a la mejor, de 0,759.
+* Ninguna variante supera a la base en la validación, de modo que se queda la regresión logística base.
+* El punto de operación elegido es de 270 alertas por mes, de unos 514 alimentadores. Ahí la regresión logística es la primera en exhaustividad entre los modelos, con 82,8 %, y la regla por historial logra 83,2 %. Frente al umbral anterior, que marcaba el 85 % de la red cada mes, los falsos positivos bajan de 1.779 a 990 y los falsos negativos suben de 17 a 75.
+* Estas alertas funcionan como lista de vigilancia. El plan de poda de la herramienta sigue limitado por la capacidad, y ahí la precisión ronda el 50 %, unas tres veces la prevalencia.
 
 
 ## Arquitectura para la operación

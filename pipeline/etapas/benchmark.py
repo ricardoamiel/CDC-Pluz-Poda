@@ -8,7 +8,7 @@ LightGBM y SVM. Todos usan solo las variables de config.VARIABLES, es decir, nin
 las que el índice de criticidad ya cuenta por su lado.
 
 Partición:
-    entrenamiento interno  cortes antiguos, para elegir hiperparámetros y umbral
+    entrenamiento interno  cortes antiguos, para elegir hiperparámetros y punto de operación
     validación interna     últimos 2 cortes del entrenamiento, tras 3 meses de embargo
     entrenamiento          todos los cortes previos al embargo de la prueba
     prueba                 últimos 5 cortes con ventana completa, nunca usados para elegir
@@ -38,7 +38,6 @@ from etapas.modelo import _cobertura
 warnings.filterwarnings("ignore")
 
 KS = [20, 40, 80]
-K_OPERATIVO = 40          # lista mensual con la que se clasifican los ejemplos
 EPS = 1e-6
 
 NOMBRE_NEGOCIO = {
@@ -197,18 +196,21 @@ def elegir(nombre, part):
         if mejor is None or ap > mejor[0]:
             mejor = (ap, p, s)
     ap, p, s_val = mejor
-    # Umbral: el que maximiza F2 en la validación interna, porque un falso negativo cuesta
-    # más que un falso positivo (ver la justificación en el reporte).
-    prec, rec, umbrales = precision_recall_curve(val["objetivo"], s_val)
-    f2 = 5 * prec * rec / np.maximum(4 * prec + rec, EPS)
-    umbral = float(umbrales[np.argmax(f2[:-1])]) if len(umbrales) else 0.5
-    return p, umbral, float(ap)
+    return p, float(ap), s_val
 
 
 # --------------------------------------------------------------------------- métricas
 
-def metricas(y, s, umbral, datos, probabilistico=True):
-    pred = (s >= umbral).astype(int)
+def metricas(y, s, k_alerta, datos, probabilistico=True):
+    """Métricas de ordenamiento y de clasificación en el punto de operación.
+
+    El punto de operación no es una probabilidad sino cuántos alimentadores se marcan en
+    alerta cada mes. Una probabilidad elegida en la validación no se traslada al modelo
+    final, que se entrena con más meses y cambia de escala; un número de alertas por mes
+    sí, y además es como opera Pluz. Con el mismo número de alertas para todos los
+    modelos, más exhaustividad significa exactamente menos falsos positivos.
+    """
+    pred = lista_operativa(datos, s, k_alerta)[0]
     tn, fp, fn, tp = confusion_matrix(y, pred, labels=[0, 1]).ravel()
     m = {
         "roc_auc": float(roc_auc_score(y, s)),
@@ -219,7 +221,7 @@ def metricas(y, s, umbral, datos, probabilistico=True):
         "f2": float(fbeta_score(y, pred, beta=2, zero_division=0)),
         "especificidad": float(tn / max(1, tn + fp)),
         "exactitud": float((tp + tn) / len(y)),
-        "umbral": float(umbral),
+        "alertas_por_mes": int(k_alerta),
         "matriz": {"tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp)},
     }
     if probabilistico:
@@ -233,11 +235,92 @@ def metricas(y, s, umbral, datos, probabilistico=True):
     return m
 
 
-def lista_operativa(datos, s, k=K_OPERATIVO):
+def lista_operativa(datos, s, k):
     """Marca 1 en los k alimentadores de mayor puntaje de cada mes: el plan que se ejecutaría."""
     d = datos[["periodo"]].assign(p=s)
     d["puesto"] = d.groupby("periodo")["p"].rank(ascending=False, method="first")
     return (d["puesto"] <= k).astype(int).values, d["puesto"].values
+
+
+REJILLA_ALERTAS = list(range(10, 401, 10))
+
+
+def f2_por_alertas(datos, s):
+    y = datos["objetivo"].values
+    return [float(fbeta_score(y, lista_operativa(datos, s, k)[0], beta=2)) for k in REJILLA_ALERTAS]
+
+
+def elegir_punto_operacion(validacion, s_val):
+    """El menor número de alertas por mes que alcanza la fracción fijada del F2 máximo."""
+    curva = f2_por_alertas(validacion, s_val)
+    objetivo = config.FRACCION_F2_MAXIMO * max(curva)
+    k = next(k for k, f in zip(REJILLA_ALERTAS, curva) if f >= objetivo)
+    return k, curva
+
+
+def ganancia(prueba, s):
+    """Exhaustividad y falsos positivos en la prueba según las alertas por mes."""
+    y = prueba["objetivo"].values
+    rec, fp = [], []
+    for k in REJILLA_ALERTAS:
+        m = lista_operativa(prueba, s, k)[0]
+        tp = int((m & y).sum())
+        rec.append(round(tp / max(1, y.sum()), 4))
+        fp.append(int(m.sum() - tp))
+    return {"k": REJILLA_ALERTAS, "recall": rec, "fp": fp}
+
+
+def ablacion_logistica(part, k_alerta):
+    """Variantes de la regresión logística, elegidas por su precisión media en la validación.
+
+    Se prueban recencia del último evento, tendencia de tres meses y relaciones no lineales
+    con splines. Ninguna variante usa variables del índice. Se queda la variante base salvo
+    que otra la supere en la validación por más de 0,005 de precisión media.
+    """
+    from sklearn.compose import ColumnTransformer
+    from sklearn.preprocessing import SplineTransformer
+    base = list(config.VARIABLES)
+    recencia, tendencia = ["meses_desde_veg", "sin_evento_previo"], ["log_veg_3m", "log_eventos_3m"]
+    variantes = {
+        "Base": (base, False),
+        "Base con recencia": (base + recencia, False),
+        "Base con tendencia de 3 meses": (base + tendencia, False),
+        "Base con recencia y tendencia": (base + recencia + tendencia, False),
+        "Base con splines": (base, True),
+        "Base con splines y recencia": (base + recencia, True),
+    }
+
+    def crear(cols, splines, C):
+        lr = LogisticRegression(C=C, max_iter=4000)
+        if not splines:
+            return Pipeline([("esc", StandardScaler()), ("m", lr)])
+        fijas = {"mes_sin", "mes_cos", "sin_evento_previo"}
+        cont = [c for c in cols if c not in fijas]
+        ct = ColumnTransformer([("s", SplineTransformer(n_knots=4, degree=3), cont),
+                                ("r", "passthrough", [c for c in cols if c in fijas])])
+        return Pipeline([("ct", ct), ("esc", StandardScaler()), ("m", lr)])
+
+    interno, val, ent, prueba = part["interno"], part["validacion"], part["entrena"], part["prueba"]
+    y = prueba["objetivo"].values
+    filas = []
+    for nombre, (cols, splines) in variantes.items():
+        mejor = None
+        for C in (0.01, 0.05, 0.2, 1.0):
+            m = crear(cols, splines, C).fit(interno[cols], interno["objetivo"])
+            ap = average_precision_score(val["objetivo"], _proba(m, val[cols]))
+            if mejor is None or ap > mejor[0]:
+                mejor = (ap, C)
+        s = _proba(crear(cols, splines, mejor[1]).fit(ent[cols], ent["objetivo"]), prueba[cols])
+        marca = lista_operativa(prueba, s, k_alerta)[0]
+        tp = int((marca & y).sum())
+        filas.append({"variante": nombre, "C": mejor[1], "pr_auc_validacion": float(mejor[0]),
+                      "pr_auc": float(average_precision_score(y, s)), "roc_auc": float(roc_auc_score(y, s)),
+                      "cobertura_40": _cobertura(prueba, s, 40), "recall": tp / max(1, y.sum()),
+                      "fp": int(marca.sum() - tp), "fn": int(y.sum() - tp)})
+    base_ap = filas[0]["pr_auc_validacion"]
+    mejor = max(filas, key=lambda f: f["pr_auc_validacion"])
+    elegida = mejor["variante"] if mejor["pr_auc_validacion"] > base_ap + 0.005 else "Base"
+    return {"variantes": filas, "elegida": elegida}
 
 
 def bootstrap_contra(prueba, s_ref, s_mod, reps=300):
@@ -320,9 +403,9 @@ def aporte_variables(part):
 
 # --------------------------------------------------------------------------- ejemplos
 
-def ejemplos(panel, prueba, s, nombre_modelo, n=4):
-    """Casos concretos de la prueba con el plan de 40 por mes: aciertos y errores."""
-    en_lista, puesto = lista_operativa(prueba, s)
+def ejemplos(panel, prueba, s, nombre_modelo, k_alerta, n=4):
+    """Casos concretos de la prueba en el punto de operación: aciertos y errores."""
+    en_lista, puesto = lista_operativa(prueba, s, k_alerta)
     d = prueba[["alimentador", "periodo", "objetivo", "veg_12m", "veg_hist",
                 "eventos_12m"]].copy()
     d["probabilidad"], d["en_lista"], d["puesto"] = s, en_lista, puesto
@@ -385,26 +468,33 @@ def ejecutar(panel, inicio, corte, operativo):
            "positivos": {k: int(v["objetivo"].sum()) for k, v in part.items()},
            "modelos": {}, "curvas": {}, "aprendizaje": {}}
 
+    # Primero se eligen los hiperparámetros de cada modelo en la validación interna, y con
+    # la regresión logística, que es el modelo en producción, el punto de operación común.
+    elegidos = {n: elegir(n, part) for n in CANDIDATOS}
+    k_alerta, curva_f2 = elegir_punto_operacion(part["validacion"], elegidos["Regresión logística"][2])
+    res["punto_operacion"] = {"alertas_por_mes": k_alerta, "rejilla": REJILLA_ALERTAS,
+                              "f2_validacion": curva_f2,
+                              "fraccion_f2_maximo": config.FRACCION_F2_MAXIMO,
+                              "alimentadores_por_mes": int(len(prueba) / prueba["periodo"].nunique()),
+                              "positivos_por_mes": float(prueba["objetivo"].sum() / prueba["periodo"].nunique())}
+    print(f"    Punto de operación elegido en la validación: {k_alerta} alertas por mes")
+
     # Regla por historial: lo que Pluz podría hacer hoy sin modelo.
     regla = lambda d: (d["veg_12m"] + 0.01 * d["veg_hist"]).values  # noqa: E731
-    s_regla_val = regla(part["validacion"])
-    prec, rec, umb = precision_recall_curve(part["validacion"]["objetivo"], s_regla_val)
-    f2 = 5 * prec * rec / np.maximum(4 * prec + rec, EPS)
-    umbral_regla = float(umb[np.argmax(f2[:-1])])
     puntajes = {"Regla por historial": regla(prueba)}
     res["modelos"]["Regla por historial"] = {
         "hiperparametros": {"puntaje": "eventos de 12 meses más 0,01 por el historial"},
-        "prueba": metricas(y, puntajes["Regla por historial"], umbral_regla, prueba, False)}
+        "prueba": metricas(y, puntajes["Regla por historial"], k_alerta, prueba, False)}
 
     for nombre in CANDIDATOS:
         t0 = time.time()
-        p, umbral, ap_val = elegir(nombre, part)
+        p, ap_val, _ = elegidos[nombre]
         modelo = CANDIDATOS[nombre]["crear"](p).fit(part["entrena"][config.VARIABLES],
                                                     part["entrena"]["objetivo"])
         s = _proba(modelo, prueba[config.VARIABLES])
         puntajes[nombre] = s
         res["modelos"][nombre] = {"hiperparametros": p, "pr_auc_validacion": ap_val,
-                                  "prueba": metricas(y, s, umbral, prueba),
+                                  "prueba": metricas(y, s, k_alerta, prueba),
                                   "segundos": round(time.time() - t0, 1)}
         res["curvas"][nombre] = _curva_iteraciones(nombre, modelo, {
             "Entrenamiento": part["entrena"], "Prueba": prueba})
@@ -417,13 +507,14 @@ def ejecutar(panel, inicio, corte, operativo):
         if nombre != "Regresión logística":
             res["modelos"][nombre]["contra_logistica"] = bootstrap_contra(prueba, ref, s)
 
-    # Decisión: se cambia la regresión logística solo si otro modelo la supera con un
-    # intervalo que no cruza el cero en la métrica operativa. En empate se queda la más
-    # simple, calibrada y explicable.
-    mejores = [(n, r["contra_logistica"]["cobertura_40"]) for n, r in res["modelos"].items()
+    # Decisión: el modelo se usa para ordenar una lista, de modo que decide la métrica de
+    # ordenamiento con clases desbalanceadas, la PR AUC. Se cambia la regresión logística
+    # solo si otro modelo la supera ahí con un intervalo que no cruza el cero. En empate se
+    # queda la más simple, calibrada y explicable.
+    mejores = [(n, r["contra_logistica"]["pr_auc"]) for n, r in res["modelos"].items()
                if "contra_logistica" in r and n != "Regla por historial"]
     ganadores = [n for n, b in mejores if b["li"] > 0]
-    elegido = max(ganadores, key=lambda n: res["modelos"][n]["prueba"]["cobertura_40"]) \
+    elegido = max(ganadores, key=lambda n: res["modelos"][n]["prueba"]["pr_auc"]) \
         if ganadores else "Regresión logística"
     res["decision"] = {"modelo": elegido, "supera_con_intervalo": ganadores}
 
@@ -440,9 +531,18 @@ def ejecutar(panel, inicio, corte, operativo):
             fo, mp = calibration_curve(y, s, n_bins=10, strategy="quantile")
             res["calibracion"][nombre] = {"x": mp.round(4).tolist(), "y": fo.round(4).tolist()}
 
+    res["ganancia"] = {n: ganancia(prueba, s) for n, s in puntajes.items()}
+    # Primero en exhaustividad entre los modelos; la regla por historial se informa aparte
+    # porque es la referencia, no un candidato.
+    recall_k = {n: res["modelos"][n]["prueba"]["recall"] for n in CANDIDATOS}
+    res["punto_operacion"]["primero_en_exhaustividad"] = max(recall_k, key=recall_k.get)
+    res["punto_operacion"]["logistica_empata_primero"] = (
+        recall_k["Regresión logística"] >= max(recall_k.values()) - 1e-9)
+    res["punto_operacion"]["recall_regla"] = res["modelos"]["Regla por historial"]["prueba"]["recall"]
+    res["ablacion_logistica"] = ablacion_logistica(part, k_alerta)
     res["redundancia"] = redundancia(panel, operativo)
     res["aporte_variables"] = aporte_variables(part)
-    res["ejemplos"] = (ejemplos(panel, prueba, puntajes[elegido], elegido) +
-                       (ejemplos(panel, prueba, puntajes["XGBoost"], "XGBoost")
+    res["ejemplos"] = (ejemplos(panel, prueba, puntajes[elegido], elegido, k_alerta) +
+                       (ejemplos(panel, prueba, puntajes["XGBoost"], "XGBoost", k_alerta)
                         if elegido != "XGBoost" else []))
     return res

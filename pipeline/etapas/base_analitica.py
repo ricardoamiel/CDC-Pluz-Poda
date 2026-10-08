@@ -67,6 +67,14 @@ def construir(tablas):
     panel["meses_sin_poda"] = bruto.fillna(config.CENSURA_PODA).clip(upper=config.CENSURA_PODA)
     for c in ("veg_12m", "veg_hist", "eventos_12m"):
         panel["log_" + c] = np.log1p(panel[c])
+
+    # Candidatas que solo usa la ablación del benchmark: recencia del último evento de
+    # vegetación y tendencia de los últimos tres meses. Ninguna se relaciona con el índice.
+    previo = g["eventos_veg"].transform(_meses_desde)
+    panel["sin_evento_previo"] = previo.isna().astype(int)
+    panel["meses_desde_veg"] = previo.fillna(36.0).clip(upper=36.0)
+    panel["log_veg_3m"] = np.log1p(g["eventos_veg"].transform(lambda s: s.rolling(3, min_periods=1).sum()))
+    panel["log_eventos_3m"] = np.log1p(g["eventos_tot"].transform(lambda s: s.rolling(3, min_periods=1).sum()))
     panel["mes_sin"] = np.sin(2 * np.pi * panel["periodo"].dt.month / 12)
     panel["mes_cos"] = np.cos(2 * np.pi * panel["periodo"].dt.month / 12)
 
