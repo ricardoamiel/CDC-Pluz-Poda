@@ -51,7 +51,7 @@ Los filtros no cambian el plan. El plan lo fija siempre el tamaño elegido: filt
 
 ## Modelo y benchmark
 
-La probabilidad de interferencia a tres meses sale de una regresión logística con el historial de vegetación, la vegetación de los últimos doce meses, las interrupciones de los últimos doce meses y la estacionalidad. No usa ninguna de las tres variables que el índice ya cuenta por su lado: reloj de poda, SAIDI y exposición por clientes y potencia. En la segunda revisión de la reunión N°3 se comparó con la regresión logística ponderada, el refuerzo de gradiente, Random Forest, XGBoost, LightGBM y SVM: ninguno la supera de forma distinguible, de modo que se mantiene por simple, calibrada y explicable. El detalle, y cómo correr el benchmark y verlo en MLflow, está en pipeline/README.md.
+La probabilidad de interferencia a tres meses sale de una regresión logística con el historial de vegetación, la vegetación de los últimos doce meses, las interrupciones de los últimos doce meses y la estacionalidad. No usa ninguna de las tres variables que el índice ya cuenta por su lado: reloj de poda, SAIDI y exposición por clientes y potencia. En la segunda revisión de la reunión N°3 se comparó con la regresión logística ponderada, el refuerzo de gradiente, Random Forest, XGBoost, LightGBM y SVM: ninguno la supera de forma distinguible, de modo que se mantiene por simple, calibrada y explicable. El detalle, y cómo correr el benchmark y verlo en MLflow, está en pipeline/README.md. El reporte del benchmark se publica junto con la herramienta, en la carpeta benchmark del sitio: es la misma dirección de la página seguida de benchmark/.
 
 
 ## Arquitectura para la operación
@@ -119,6 +119,7 @@ No hace falta ningún paso de compilación ni ningún servidor de aplicaciones. 
 * **pipeline.** Flujo de datos, del lote de Pluz a la carpeta data. Se documenta en pipeline/README.md.
 * **docs.** Diagramas de arquitectura en SVG y el generador que los dibuja.
 * **ARQUITECTURA.md.** Propuestas para la operación, en las instalaciones de Pluz y en AWS.
+* **benchmark.** Reporte interactivo del benchmark de modelos, publicado como segundo enlace. Lo reescribe la orden benchmark del pipeline.
 
 
 ## Decisiones de diseño

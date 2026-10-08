@@ -208,8 +208,14 @@ def benchmark():
     carpeta.mkdir(parents=True, exist_ok=True)
     reporte = reporte_benchmark.escribir(resultados, carpeta / "benchmark_modelos.html")
     uri = bm.registrar_mlflow(resultados, reporte)
+    # Copia publicable: GitHub Pages sirve la carpeta benchmark como un segundo enlace. Solo
+    # lleva métricas, curvas y algunos ejemplos por alimentador, nada de los Excel de Pluz.
+    publico = config.REPO / "benchmark"
+    publico.mkdir(exist_ok=True)
+    (publico / "index.html").write_text(reporte.read_text(encoding="utf-8"), encoding="utf-8")
     print(f"\nModelo recomendado: {resultados['decision']['modelo']}")
     print(f"Reporte: {reporte}")
+    print(f"Copia para GitHub Pages: {publico / 'index.html'}")
     print("Corridas en MLflow: abrir con la orden mlflow" if uri else "MLflow no está instalado")
     webbrowser.open(reporte.as_uri())
 
