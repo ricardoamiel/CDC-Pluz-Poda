@@ -15,6 +15,8 @@ El recorrido completo es este:
 
 ## La rutina semanal
 
+La guía completa de instalación y operación, con la tarea programada, la opción manual y la demostración con datos reales, está en docs/GUIA_PROPUESTA_1.md. Aquí va el resumen.
+
 1. Guardar el lote en una carpeta nueva dentro de pipeline/datos/lotes, cuyo nombre empiece por la fecha de recepción en formato AAAAMMDD, por ejemplo 20261012_semana41. Los archivos se copian tal como llegan: no hace falta renombrarlos ni que el lote traiga todas las fuentes.
 2. Validar el lote:
    ```
@@ -48,6 +50,8 @@ Todas las órdenes disponibles:
 * **ver.** Abre la página en el navegador, servida desde el propio equipo.
 * **subir.** Publica la carpeta data en GitHub.
 * **geografia.** Vuelve a descargar los límites de los distritos de OpenStreetMap.
+* **semanal.** Lo que corre cada lunes: recibe el lote de la carpeta de entrada, corre todo y copia la página al servidor web interno. Es lo que ejecutan pipeline/programar/actualizar_semanal.bat en Windows y pipeline/programar/actualizar_semanal.sh en Linux, a mano o programados.
+* **recibir.** Solo arma el lote nuevo con lo que haya en la carpeta de entrada, PLUZ_CARPETA_ENTRADA, y mueve los originales a procesados.
 * **instalar.** Instala las bibliotecas. Con instalar base agrega las de la base de datos.
 * **benchmark.** Compara modelos y genera el reporte interactivo en pipeline/salidas/benchmark.
 * **reentrenar.** Entrena un modelo vigente nuevo, previa medición frente a la regla, y publica. Se usa cuando el reporte lo recomienda.

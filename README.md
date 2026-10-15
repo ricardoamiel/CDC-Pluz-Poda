@@ -57,7 +57,7 @@ La probabilidad de interferencia a tres meses sale de una regresión logística 
 
 ## Arquitectura para la operación
 
-Dos propuestas para que la herramienta se actualice sola con cada lote semanal de Pluz, con el mismo pipeline: en las instalaciones de la empresa y en AWS. El detalle está en ARQUITECTURA.md.
+Dos propuestas para que la herramienta se actualice sola con cada lote semanal de Pluz, con el mismo pipeline: en las instalaciones de la empresa y en AWS. El detalle está en ARQUITECTURA.md. El paso a paso de cada una está en docs/GUIA_PROPUESTA_1.md y docs/GUIA_PROPUESTA_2.md; la primera incluye una demostración del flujo semanal con datos reales que se arma y se borra sin tocar la operación.
 
 ![Arquitectura en las instalaciones de Pluz](docs/arquitectura_en_las_instalaciones.svg)
 
@@ -118,7 +118,7 @@ No hace falta ningún paso de compilación ni ningún servidor de aplicaciones. 
 * **data.** Lo que carga la página: criticidad del piloto, datos de los ocho distritos y geografía. Cada archivo va en dos copias con el mismo contenido: la de extensión js la carga la página, y la de extensión json sirve para reutilizar los datos.
 * **assets.** Logotipo completo, isotipo e icono de pestaña.
 * **pipeline.** Flujo de datos, del lote de Pluz a la carpeta data. Se documenta en pipeline/README.md.
-* **docs.** Diagramas de arquitectura en SVG y el generador que los dibuja.
+* **docs.** Diagramas de arquitectura en SVG, el generador que los dibuja y las guías paso a paso de las dos propuestas.
 * **ARQUITECTURA.md.** Propuestas para la operación, en las instalaciones de Pluz y en AWS.
 * **benchmark.** Reporte interactivo del benchmark de modelos, publicado como segundo enlace. Lo reescribe la orden benchmark del pipeline.
 

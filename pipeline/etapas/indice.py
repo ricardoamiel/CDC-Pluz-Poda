@@ -194,10 +194,11 @@ def publicar(distritos):
     # La versión en la dirección de cada archivo de datos obliga al navegador a bajar los
     # nuevos tras cada actualización, en lugar de mostrar los de la semana anterior.
     version = pd.Timestamp.today().strftime("%Y%m%d%H%M")
-    pagina = config.REPO / "index.html"
-    html = pagina.read_text(encoding="utf-8")
-    html = re.sub(r'(src="data/[a-z_]+\.js)(\?v=[0-9]+)?"', rf'\1?v={version}"', html)
-    pagina.write_text(html, encoding="utf-8")
+    pagina = config.DATA_WEB.parent / "index.html"
+    if pagina.exists():
+        html = pagina.read_text(encoding="utf-8")
+        html = re.sub(r'(src="data/[a-z_]+\.js)(\?v=[0-9]+)?"', rf'\1?v={version}"', html)
+        pagina.write_text(html, encoding="utf-8")
 
     return {
         "criticidad_los_olivos": _escribir("criticidad_los_olivos", "DATOS_PLUZ",

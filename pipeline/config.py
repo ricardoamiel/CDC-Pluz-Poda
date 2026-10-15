@@ -24,12 +24,31 @@ DATA_WEB = REPO / "data"
 # Referencias fijas que sí se versionan: límites de distritos de OpenStreetMap.
 REFERENCIA = PIPELINE / "referencia"
 
+# Modo demostración. Con la variable PLUZ_DEMO apuntando a una carpeta, el pipeline trabaja
+# solo dentro de ella: sus propios lotes, sus salidas, su página y su carpeta de entrada.
+# Así se puede mostrar el flujo semanal sin tocar los datos reales ni la página publicada.
+# La carpeta la prepara pipeline/demo/preparar_demo.py.
+DEMO = os.environ.get("PLUZ_DEMO", "")
+if DEMO:
+    _demo = Path(DEMO)
+    LOTES, SALIDAS, DATA_WEB = _demo / "lotes", _demo / "salidas", _demo / "web" / "data"
+
 # Base de datos opcional. Vacía, el pipeline no la usa. Se puede fijar aquí o con la
 # variable de entorno PLUZ_BASE_DE_DATOS, que es lo recomendable para no dejar la clave en
 # el código. Ejemplos:
 #   sqlite:///pipeline/salidas/pluz.db
 #   postgresql://usuario:clave@servidor:5432/pluz
 BASE_DE_DATOS = os.environ.get("PLUZ_BASE_DE_DATOS", "")
+
+# Operación en las instalaciones de Pluz (propuesta 1). Las dos carpetas son opcionales y se
+# fijan con variables de entorno para no escribir rutas de un equipo en el código.
+# CARPETA_ENTRADA: carpeta compartida donde el área deja el Excel de cada semana. La orden
+#   recibir copia lo que haya ahí a un lote nuevo y mueve los originales a procesados.
+# CARPETA_WEB: carpeta que sirve el servidor web interno. La orden semanal copia ahí la
+#   página con sus datos nuevos al terminar.
+CARPETA_ENTRADA = os.environ.get("PLUZ_CARPETA_ENTRADA", "") or (str(Path(DEMO) / "entrada") if DEMO else "")
+CARPETA_WEB = os.environ.get("PLUZ_CARPETA_WEB", "")
+EXTENSIONES_LOTE = (".xlsx", ".xls", ".csv")
 
 # Fuentes
 # Cada fuente se reconoce por un patrón de nombre de archivo, sin distinguir mayúsculas ni

@@ -130,13 +130,13 @@ class Lienzo:
 
 def en_las_instalaciones():
     c = Lienzo(1340, 790, "Propuesta 1. En las instalaciones de Pluz",
-               "Lote semanal, un modelo estable que se monitorea cada semana, una base PostgreSQL y la página dentro de la red")
+               "Lote semanal en Excel, un modelo estable que se monitorea cada semana y la página dentro de la red")
     W = 196
     c.tarjeta(28, 96, W, "Áreas de Pluz", ["Excel semanal de interrupciones,", "poda, guía y ranking"],
               iconos=[("personas", "personas"), ("hoja", "excel")])
     c.tarjeta(252, 96, W, "Carpeta compartida", ["OneDrive, SharePoint o red;", "una carpeta por lote"],
               iconos=[("carpeta", "nube_ms")])
-    c.tarjeta(476, 96, W, "Programador de tareas", ["de Windows, cada lunes", "a primera hora"],
+    c.tarjeta(476, 96, W, "Cada lunes a las 10:00", ["a mano, con el Programador", "de tareas o con cron"],
               iconos=[("calendario", "windows")])
     c.flecha([(224, 152), (250, 152)])
     c.flecha([(448, 152), (474, 152)])
@@ -163,20 +163,21 @@ def en_las_instalaciones():
     c.flecha([(1011, 396), (1011, 412)])
     c.flecha([(817, 396), (817, 412)], punteada=True)
 
-    c.tarjeta(710, 600, 602, "PostgreSQL con PostGIS",
-              ["Se reemplazan: interrupciones, poda, guía, ranking y base analítica.",
-               "Se acumulan: predicciones, índice y corridas, el historial para medir aciertos.",
-               "Alternativa equivalente: SQL Server Express."],
-              iconos=[("cilindro", "postgres")])
-    c.flecha([(1180, 524), (1180, 598)], "escribe", dx=30)
+    c.tarjeta(710, 600, 602, "Opcional: PostgreSQL o SQL Server",
+              ["Con este volumen basta Excel. Una base solo suma si se quiere el historial",
+               "de predicciones en un solo lugar o varias personas consultando a la vez.",
+               "El pipeline ya sabe escribir en ella; se activa con una variable."],
+              iconos=[("cilindro", "postgres")], discontinua=True)
+    c.flecha([(1180, 524), (1180, 598)], "si se activa", punteada=True, dx=40)
 
     c.tarjeta(28, 600, W, "Página interna", ["la misma herramienta, en", "IIS, nginx o SharePoint"],
               iconos=[("navegador", "pluz")], alto=126)
     c.tarjeta(252, 600, W, "Plan en Excel", ["para programar las", "cuadrillas del mes"],
               iconos=[("hoja", "excel")], alto=126)
-    c.tarjeta(476, 600, W, "Excel y Power BI", ["conectados a la base", "para cruzar planillas"],
-              iconos=[("barras", "powerbi"), ("hoja", "excel")], alto=126)
-    c.flecha([(708, 663), (674, 663)])
+    c.tarjeta(476, 600, W, "Power BI", ["lee el plan en Excel de", "cada semana, o la base"],
+              iconos=[("barras", "powerbi")], alto=126)
+    c.flecha([(448, 663), (474, 663)])
+    c.flecha([(708, 663), (674, 663)], punteada=True)
     c.flecha([(1000, 524), (1000, 572), (126, 572), (126, 598)], "publica")
     c.flecha([(980, 524), (980, 582), (350, 582), (350, 598)])
     c.guardar("arquitectura_en_las_instalaciones.svg")

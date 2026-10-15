@@ -29,18 +29,20 @@ Tres hechos deciden la arquitectura:
 
 ## 3. Propuesta 1: en las instalaciones de Pluz
 
+El paso a paso de instalación, de la corrida semanal, manual o programada, y de la demostración con datos reales está en docs/GUIA_PROPUESTA_1.md.
+
 ![Arquitectura en las instalaciones de Pluz](docs/arquitectura_en_las_instalaciones.svg)
 
 ### Componentes
 
 1. **Entrada.** Una carpeta compartida en OneDrive, SharePoint o una unidad de red. El área deja ahí el Excel semanal, en una subcarpeta con la fecha del lote. Es lo único que cambia en su forma de trabajo.
-2. **Proceso.** El pipeline de este repositorio, instalado en un servidor o en un computador de la Subgerencia, programado con el Programador de tareas de Windows para correr cada lunes. La orden programada es python pipeline/actualizar.py.
-3. **Almacenamiento.** PostgreSQL con la extensión PostGIS para las coordenadas de las subestaciones. Es gratuito, estándar, permite varios usuarios a la vez y se conecta con Excel y Power BI. Si el área de sistemas de Pluz trabaja con Microsoft, SQL Server Express es equivalente y gratuito hasta 10 GB. El pipeline escribe en cualquiera de los dos cambiando solo la dirección de conexión.
-4. **Consumo.** La página, servida dentro de la red de Pluz en un servidor web interno o en SharePoint; el plan en Excel para programar cuadrillas; y Excel o Power BI conectados a la base para cruzar la información con otras planillas.
+2. **Proceso.** El pipeline de este repositorio, instalado en un servidor o en un computador de la Subgerencia, que corre cada lunes a las 10:00, a mano con doble clic o programado con el Programador de tareas de Windows o con cron. Lo que se ejecuta es pipeline/programar/actualizar_semanal.bat, o el .sh en Linux, que llama a python pipeline/actualizar.py semanal.
+3. **Almacenamiento: Excel, y una base de datos solo si hace falta.** Con este volumen, menos de 20 MB en todo el histórico, cada corrida deja el plan en un libro de Excel que el área usa directamente y que Power BI puede leer. Una base de datos es **opcional**: suma solo si se quiere el historial de predicciones en un solo lugar o varias personas consultando a la vez. En ese caso, PostgreSQL con PostGIS es gratuito y estándar, y SQL Server Express es equivalente si el área de sistemas trabaja con Microsoft. El pipeline ya escribe en cualquiera de los dos cambiando solo una variable.
+4. **Consumo.** La página, servida dentro de la red de Pluz en un servidor web interno o en SharePoint; el plan en Excel para programar cuadrillas; y Power BI leyendo ese mismo Excel, o la base de datos si se activa, para cruzar la información con otras planillas.
 
 ### Lo que ya está listo y lo que pone Pluz
 
-Está listo en este repositorio: el pipeline completo con validación, modelo vigente, monitoreo, recalibración, freno y reporte; el plan en Excel; la escritura en base de datos, probada con SQLite; el benchmark con MLflow; y esta documentación. Pluz pone el servidor o computador, la carpeta compartida, la instalación de PostgreSQL o SQL Server y el sitio interno donde se sirve la página.
+Está listo en este repositorio: el pipeline completo con validación, modelo vigente, monitoreo, recalibración, freno y reporte; el plan en Excel; la escritura en base de datos, probada con SQLite; el benchmark con MLflow; y esta documentación. Pluz pone el servidor o computador, la carpeta compartida, el sitio interno donde se sirve la página y, solo si la quiere, una base de datos.
 
 ### Ventajas y límites
 
@@ -48,6 +50,8 @@ Es la opción más rápida de poner en marcha, no tiene costo de licencias y los
 
 
 ## 4. Propuesta 2: en AWS
+
+El paso a paso de construcción y de operación semanal está en docs/GUIA_PROPUESTA_2.md.
 
 ![Arquitectura en AWS](docs/arquitectura_aws.svg)
 

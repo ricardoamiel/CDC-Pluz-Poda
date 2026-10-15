@@ -4,6 +4,8 @@
 Uso, desde la raíz del repositorio:
 
     python pipeline/actualizar.py            corrida completa: valida, calcula y publica en data/
+    python pipeline/actualizar.py semanal    recibe el lote, corre todo y copia la página al servidor
+    python pipeline/actualizar.py recibir    arma un lote con lo que haya en la carpeta de entrada
     python pipeline/actualizar.py validar    solo revisa que los lotes cumplan el contrato
     python pipeline/actualizar.py calcular   calcula todo, pero no toca data/
     python pipeline/actualizar.py forzar     publica aunque el modelo quede bajo la regla
@@ -35,8 +37,8 @@ sys.path.insert(0, str(PIPELINE))
 
 import config  # noqa: E402
 
-ORDENES = ["completa", "validar", "calcular", "forzar", "reentrenar", "ver", "subir", "geografia",
-           "instalar", "benchmark", "mlflow"]
+ORDENES = ["completa", "semanal", "recibir", "validar", "calcular", "forzar", "reentrenar", "ver",
+           "subir", "geografia", "instalar", "benchmark", "mlflow"]
 
 # Si el modelo queda claramente peor que la regla por historial, la corrida no publica:
 # algo cambió en los datos y alguien tiene que revisarlo antes de que llegue a la página.
@@ -284,12 +286,75 @@ def abrir_mlflow(puerto=5000):
                     "--port", str(puerto)], cwd=config.SALIDAS)
 
 
+def recibir():
+    """Copia el Excel de la carpeta de entrada a un lote nuevo y deja los originales en procesados.
+
+    Devuelve la carpeta del lote creado, o nada si no había archivos nuevos. Así la tarea
+    programada puede correr cada lunes aunque esa semana no haya llegado nada.
+    """
+    import shutil
+    if not config.CARPETA_ENTRADA:
+        print("  No hay carpeta de entrada configurada (variable PLUZ_CARPETA_ENTRADA).")
+        return None
+    entrada = Path(config.CARPETA_ENTRADA)
+    if not entrada.is_dir():
+        print(f"  La carpeta de entrada no existe: {entrada}")
+        return None
+    archivos = [a for a in entrada.iterdir()
+                if a.is_file() and a.suffix.lower() in config.EXTENSIONES_LOTE and not a.name.startswith("~$")]
+    if not archivos:
+        print("  No hay archivos nuevos en la carpeta de entrada; se usan los lotes que ya existen.")
+        return None
+    fecha = time.strftime("%Y%m%d")
+    lote = config.LOTES / f"{fecha}_semanal"
+    n = 2
+    while lote.exists():
+        lote = config.LOTES / f"{fecha}_semanal{n}"
+        n += 1
+    lote.mkdir(parents=True)
+    procesados = entrada / "procesados" / lote.name
+    procesados.mkdir(parents=True, exist_ok=True)
+    for archivo in archivos:
+        shutil.copy2(archivo, lote / archivo.name)
+        shutil.move(str(archivo), procesados / archivo.name)
+        print(f"  {archivo.name}")
+    print(f"  Lote nuevo: {lote.name}, con {len(archivos)} archivos. Originales en procesados.")
+    return lote
+
+
+def copiar_web():
+    """Copia la página con sus datos nuevos a la carpeta del servidor web interno."""
+    import shutil
+    if not config.CARPETA_WEB:
+        print("  No hay carpeta web configurada (variable PLUZ_CARPETA_WEB): la página no se copia.")
+        return
+    destino = Path(config.CARPETA_WEB)
+    destino.mkdir(parents=True, exist_ok=True)
+    for nombre in ("index.html", ".nojekyll"):
+        if (config.REPO / nombre).exists():
+            shutil.copy2(config.REPO / nombre, destino / nombre)
+    for carpeta in ("css", "js", "assets"):
+        shutil.copytree(config.REPO / carpeta, destino / carpeta, dirs_exist_ok=True)
+    shutil.copytree(config.DATA_WEB, destino / "data", dirs_exist_ok=True)
+    print(f"  Página copiada a {destino}")
+
+
+def semanal():
+    """Lo que corre la tarea de cada lunes: recibir, actualizar y copiar la página."""
+    paso("Recibiendo el lote de la semana")
+    recibir()
+    corrida(publicar=True)
+    paso("Copiando la página al servidor web interno")
+    copiar_web()
+
+
 def ver(puerto=8000):
     """Sirve el repositorio en local y abre la página."""
     import functools
     import http.server
+    # Sirve la carpeta de la página: el repositorio, o la página propia del modo demostración.
     manejador = functools.partial(http.server.SimpleHTTPRequestHandler,
-                                  directory=str(config.REPO))
+                                  directory=str(config.DATA_WEB.parent))
     servidor = http.server.ThreadingHTTPServer(("127.0.0.1", puerto), manejador)
     url = f"http://127.0.0.1:{puerto}/"
     print(f"Página en {url}. Cierre con Ctrl y C.")
@@ -332,6 +397,10 @@ def main():
         geografia.descargar()
     elif orden == "ver":
         ver()
+    elif orden == "recibir":
+        recibir()
+    elif orden == "semanal":
+        semanal()
     elif orden == "benchmark":
         benchmark()
     elif orden == "mlflow":
