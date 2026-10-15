@@ -16,13 +16,15 @@ Tres hechos deciden la arquitectura:
 
 **Las mismas etapas.** Validar el lote, construir la base analítica, inferir, entrenar cuando corresponde, calcular el índice y publicar. Son las etapas del pipeline de la carpeta pipeline, documentadas en pipeline/README.md.
 
-**Inferencia semanal, entrenamiento mensual.** El objetivo del modelo es mensual: vale 1 si el alimentador tiene un evento en los tres meses siguientes. Un lote semanal actualiza las variables y por eso conviene recalcular la predicción cada semana, pero solo agrega etiquetas nuevas cuando cierra un mes y se completa una ventana de tres meses. Reentrenar cada semana gastaría cómputo sin aprender nada nuevo; reentrenar una vez al mes, al cerrar el mes, es lo que corresponde.
+**Un modelo estable, monitoreado cada semana.** El modelo no se reentrena por calendario: se entrena una vez y queda como modelo vigente, con una ficha que registra sus variables, los meses con que se entrenó y cómo rindió fuera de muestra. Cada semana predice con ese modelo y lo monitorea en los meses que ya tienen su ventana de tres meses completa y que no vio al entrenarse. Se miden dos cosas. La primera es si sigue ordenando al menos tan bien como la regla por historial. La segunda es si su probabilidad sigue calibrada, es decir, si la frecuencia observada se parece a la probabilidad promedio que declara.
 
-**Un freno antes de publicar.** Cada entrenamiento se mide fuera de muestra contra la regla por historial. Si el modelo nuevo queda más de 10 puntos de cobertura por debajo, no se publica y se avisa. En AWS ese freno es la aprobación del registro de modelos.
+**Recalibrar en vez de reentrenar.** Si la probabilidad se descalibra, por ejemplo porque cambió la frecuencia de cortes, se ajusta solo su escala con una recalibración logística sobre los meses nuevos. El orden del ranking no cambia, así que el índice y el plan tampoco: lo único que cambia es que el riesgo a tres meses vuelve a leerse como una frecuencia real. El reentrenamiento queda para cuando el monitoreo muestra que el ordenamiento cayó frente a la regla por historial, y se hace con una orden explícita, después de revisar qué cambió en los datos. Se probó con un modelo entrenado hasta enero de 2026 y medido en los cuatro meses siguientes: siguió ordenando mejor que la regla y dentro de la banda de calibración, sin pedir nada.
+
+**Un freno antes de publicar un modelo nuevo.** Cuando se reentrena, el modelo nuevo se mide fuera de muestra contra la regla por historial. Si queda más de 10 puntos de cobertura por debajo, no se guarda ni se publica y se avisa. En AWS ese freno es la aprobación del registro de modelos.
 
 **Historial para medir aciertos.** Cada predicción y cada índice se guardan con su fecha. Es lo que permitirá responder, tres meses después, si el plan acertó, que es el indicador de éxito que falta acordar con Pluz.
 
-**Seguimiento de experimentos con MLflow.** El benchmark de modelos ya registra cada corrida en MLflow con sus parámetros y métricas. En las instalaciones se usa MLflow local; en AWS, el MLflow administrado de SageMaker.
+**Seguimiento con MLflow.** Cada corrida semanal queda registrada en MLflow con las métricas de monitoreo del modelo vigente, y el benchmark de modelos registra cada comparación. Así se ve, semana a semana, si el modelo sigue ordenando mejor que la regla y si su probabilidad sigue calibrada. En las instalaciones se usa MLflow local; en AWS, el MLflow administrado de SageMaker.
 
 
 ## 3. Propuesta 1: en las instalaciones de Pluz
@@ -38,7 +40,7 @@ Tres hechos deciden la arquitectura:
 
 ### Lo que ya está listo y lo que pone Pluz
 
-Está listo en este repositorio: el pipeline completo con validación, freno y reporte; el plan en Excel; la escritura en base de datos, probada con SQLite; el benchmark con MLflow; y esta documentación. Pluz pone el servidor o computador, la carpeta compartida, la instalación de PostgreSQL o SQL Server y el sitio interno donde se sirve la página.
+Está listo en este repositorio: el pipeline completo con validación, modelo vigente, monitoreo, recalibración, freno y reporte; el plan en Excel; la escritura en base de datos, probada con SQLite; el benchmark con MLflow; y esta documentación. Pluz pone el servidor o computador, la carpeta compartida, la instalación de PostgreSQL o SQL Server y el sitio interno donde se sirve la página.
 
 ### Ventajas y límites
 
@@ -60,7 +62,7 @@ Un bucket de S3 recibe todos los Excel y CSV que envía Pluz. Desde ahí, Athena
 3. **Un orquestador.** La propuesta base no dice qué dispara cada paso. EventBridge inicia la corrida al llegar un archivo, o cada lunes, y AWS Step Functions ejecuta las etapas en orden, reintenta lo que falla y se detiene si algo no cumple.
 4. **La tabla de variables sin reescribir la lógica.** La ingeniería de variables ya existe en Python y está probada. La forma más segura de llevarla a Athena es correr ese mismo código en un trabajo de SageMaker Processing que escribe la tabla en Parquet y la registra en el catálogo: la tabla existe en Athena, pero se calcula con el código validado. Reescribirla en SQL es posible con funciones de ventana, y conviene solo si los analistas de Pluz quieren modificar las variables; en ese caso hay que comparar ambas versiones sobre un mismo corte antes de cambiar.
 5. **Dos tablas más, pequeñas.** Además de la de variables y la de inferencia, una tabla con el índice por distrito y otra con el registro de corridas y sus métricas. Sin ellas no hay forma de saber qué plan se publicó cada semana ni de medir después si acertó.
-6. **Entrenamiento mensual con aprobación.** SageMaker entrena una vez al mes, corre el benchmark y registra el modelo en Model Registry. El modelo nuevo solo queda aprobado si supera el freno frente a la regla por historial. Las métricas se registran en el MLflow administrado de SageMaker.
+6. **Monitoreo semanal y reentrenamiento a pedido, no por calendario.** SageMaker Model Monitor mide cada semana el modelo vigente en los meses nuevos con resultado, frente a la regla por historial, y una función recalibra la probabilidad si se sale de la banda. El entrenamiento en SageMaker Training, con el benchmark, solo se dispara cuando el monitoreo lo recomienda, y el modelo nuevo solo queda aprobado en Model Registry si supera el freno. Las métricas se registran en el MLflow administrado de SageMaker.
 7. **Inferencia por lotes, sin endpoint.** La predicción semanal se hace con Batch Transform o con un trabajo de Processing. Un endpoint en tiempo real estaría encendido todo el mes para usarse unos segundos por semana.
 8. **Publicación y avisos.** Una Lambda calcula el índice, escribe los datos de la página y el plan en Excel, y SNS envía por correo el reporte de la corrida. CloudWatch avisa si una etapa falla.
 9. **La página con acceso restringido.** Se sirve desde S3 con CloudFront, con acceso por Cognito o limitado a las direcciones IP de Pluz, porque muestra direcciones de subestaciones y número de clientes.
@@ -69,7 +71,7 @@ Un bucket de S3 recibe todos los Excel y CSV que envía Pluz. Desde ahí, Athena
 
 ### Seguridad, costo y ubicación de los datos
 
-Los buckets son privados y cifrados con KMS, cada servicio tiene solo los permisos que necesita y CloudTrail registra cada acceso. No hay servidores encendidos: Lambda, Athena, Step Functions y los trabajos de SageMaker se pagan por uso, y con este volumen el costo mensual es bajo; lo domina el entrenamiento mensual, que dura minutos. AWS no tiene una región en el Perú, de modo que los datos quedarían en la región más cercana, São Paulo, o en Norte de Virginia. Pluz debe confirmar que su política de datos lo permite.
+Los buckets son privados y cifrados con KMS, cada servicio tiene solo los permisos que necesita y CloudTrail registra cada acceso. No hay servidores encendidos: Lambda, Athena, Step Functions y los trabajos de SageMaker se pagan por uso, y con este volumen el costo mensual es bajo: la inferencia y el monitoreo semanales duran minutos, y el entrenamiento solo ocurre cuando el monitoreo lo pide. AWS no tiene una región en el Perú, de modo que los datos quedarían en la región más cercana, São Paulo, o en Norte de Virginia. Pluz debe confirmar que su política de datos lo permite.
 
 
 ## 5. Comparación
@@ -91,7 +93,7 @@ El paso de una a otra es directo porque las etapas son las mismas:
 
 * Validar el lote pasa de pipeline/etapas/fuentes.py a la Lambda de validación y conversión.
 * La base analítica pasa de pipeline/etapas/base_analitica.py al trabajo de Processing que escribe la tabla de variables en Athena.
-* El modelo pasa de pipeline/etapas/modelo.py y del benchmark al entrenamiento de SageMaker con Model Registry.
+* El modelo vigente, su monitoreo y su recalibración pasan de pipeline/etapas/modelo.py a SageMaker Model Monitor; el reentrenamiento a pedido y el benchmark, a SageMaker Training con Model Registry.
 * La inferencia pasa a Batch Transform y queda en la tabla de inferencia de Athena.
 * El índice y las salidas pasan de pipeline/etapas/indice.py y salidas.py a la Lambda de publicación.
 * El Programador de tareas de Windows pasa a EventBridge y Step Functions.

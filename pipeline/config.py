@@ -100,6 +100,14 @@ MESES_HISTORIA = 12          # meses de historia que necesita la primera ventana
 MESES_PRUEBA = 5             # cortes finales reservados para medir fuera de muestra
 MESES_EMBARGO = 3            # separación entre entrenamiento y prueba
 C_REGULARIZACION = 0.05      # elegido en la fase 4 con validación de origen móvil
+
+# Monitoreo del modelo vigente. El modelo no se reentrena por calendario: se mide cada semana
+# en los meses que ya tienen su ventana completa y que no vio al entrenarse.
+MESES_MINIMOS_MONITOREO = 3      # meses nuevos necesarios para decidir algo
+BANDA_CALIBRACION = (0.8, 1.25)  # frecuencia observada sobre probabilidad media aceptable
+EVENTOS_MINIMOS_CALIBRACION = 50 # eventos necesarios para recalibrar con confianza
+MARGEN_PR_AUC = 0.03             # caída de PR AUC frente a la regla que pide reentrenar
+MARGEN_COBERTURA = 0.10          # caída de cobertura con lista de 40 que pide reentrenar
 SEMILLA = 20261005
 
 # Acuerdos de la reunión N°3: la probabilidad no usa ninguna de las tres variables que el

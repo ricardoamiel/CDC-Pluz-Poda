@@ -44,6 +44,7 @@ Los filtros no cambian el plan. El plan lo fija siempre el tamaño elegido: filt
 * Los indicadores de potencia instalada y de índice mínimo se reemplazan por el SAIDI y las interrupciones del último año. La potencia sigue dentro del componente de exposición del índice, pero como cifra suelta no informaba la decisión, y el índice mínimo ya se lee en la lista priorizada.
 * La probabilidad ya no usa ninguna de las tres variables del índice de criticidad: ni el SAIDI, ni el número de clientes y la potencia, ni los meses desde la última poda, que salieron en una segunda revisión. Se estaban contando dos veces. El desempeño fuera de muestra no cambia de forma distinguible, y los diez primeros alimentadores del piloto son los mismos.
 * Benchmark de ocho modelos con reporte interactivo en D3 y registro en MLflow, y documento de arquitectura con dos propuestas de automatización.
+* El modelo deja de reentrenarse en cada corrida: hay un modelo vigente estable que se monitorea cada semana, se recalibra si su probabilidad se aleja de lo observado y solo se reentrena cuando el monitoreo lo recomienda. El monitoreo queda registrado en MLflow.
 * Nueva pestaña de comparación entre distritos, con la guía de subestaciones de junio de 2026, que cubre toda la concesión.
 * Los meses desde la última poda distinguen dos casos que antes se confundían. Un alimentador podado en el mismo mes del corte aparece como «podado este mes». Uno que no figura en el registro de poda, que empieza en enero de 2025, aparece como «sin poda registrada»; antes este segundo caso se mostraba como 24 meses, que es solo el tope que usa el cálculo. El detalle está en pipeline/README.md.
 * Los datos se actualizan con un pipeline automático, y las fechas que muestra la página salen de los propios datos.
@@ -93,7 +94,7 @@ python pipeline/actualizar.py ver
 python pipeline/actualizar.py subir
 ```
 
-La primera orden valida el lote, reentrena el modelo, predice los tres meses siguientes al último mes con datos, recalcula el índice de los ocho distritos y reescribe la carpeta data. La segunda abre la página para revisarla. La tercera la publica en GitHub, previa confirmación.
+La primera orden valida el lote, monitorea el modelo vigente y lo recalibra si hace falta, predice los tres meses siguientes al último mes con datos, recalcula el índice de los ocho distritos y reescribe la carpeta data. La segunda abre la página para revisarla. La tercera la publica en GitHub, previa confirmación.
 
 Los Excel de Pluz no se suben al repositorio. El repositorio es público porque lo sirve GitHub Pages, y el archivo .gitignore deja fuera los lotes y las salidas técnicas.
 

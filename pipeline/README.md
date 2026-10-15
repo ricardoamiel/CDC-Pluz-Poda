@@ -1,13 +1,13 @@
 # Flujo de datos: del lote de Pluz a la herramienta
 
-Este pipeline convierte cada lote de datos que envía Pluz Energía en los archivos que dibuja la página. Con una sola orden valida el lote, reconstruye la base analítica, mide el modelo, lo reentrena, predice los tres meses siguientes, calcula el índice de criticidad de cada distrito, escribe la carpeta data y deja el plan en un libro de Excel. La página no cambia: solo cambian sus datos.
+Este pipeline convierte cada lote de datos que envía Pluz Energía en los archivos que dibuja la página. Con una sola orden valida el lote, reconstruye la base analítica, monitorea el modelo vigente, lo recalibra si hace falta, predice los tres meses siguientes, calcula el índice de criticidad de cada distrito, escribe la carpeta data y deja el plan en un libro de Excel. La página no cambia: solo cambian sus datos.
 
 El recorrido completo es este:
 
 1. **Lote de Pluz.** Los archivos de Excel tal como llegan.
 2. **Fuentes.** Se localiza cada archivo y se valida que traiga las columnas pactadas.
 3. **Base analítica.** Una fila por alimentador y mes, con sus variables y su objetivo.
-4. **Modelo.** Se mide fuera de muestra, se reentrena y se predice el último mes.
+4. **Modelo.** Se predice el último mes con el modelo vigente, que se monitorea cada semana y se recalibra si hace falta.
 5. **Índice.** Se calcula por distrito, en dos niveles, y se escribe en la carpeta data.
 6. **Salidas.** Plan en Excel, reporte de la corrida y, si está configurada, la base de datos.
 7. **Publicación.** La carpeta data se sube a GitHub y la página se actualiza sola.
@@ -50,7 +50,8 @@ Todas las órdenes disponibles:
 * **geografia.** Vuelve a descargar los límites de los distritos de OpenStreetMap.
 * **instalar.** Instala las bibliotecas. Con instalar base agrega las de la base de datos.
 * **benchmark.** Compara modelos y genera el reporte interactivo en pipeline/salidas/benchmark.
-* **mlflow.** Abre MLflow con las corridas del benchmark.
+* **reentrenar.** Entrena un modelo vigente nuevo, previa medición frente a la regla, y publica. Se usa cuando el reporte lo recomienda.
+* **mlflow.** Abre MLflow: el monitoreo semanal del modelo vigente, en el experimento pluz_modelo_vigente, y el benchmark, en pluz_vegetacion_benchmark.
 
 
 ## Contrato de datos
@@ -72,7 +73,7 @@ Cada fuente se reconoce por el nombre del archivo, sin distinguir mayúsculas ni
 
 * **Fuentes**, en etapas/fuentes.py. Entrega las tablas limpias y un registro de qué archivo de qué lote se usó.
 * **Base analítica**, en etapas/base_analitica.py. Entrega una fila por alimentador y mes, con variables y objetivo.
-* **Modelo**, en etapas/modelo.py. Entrega las métricas fuera de muestra, el modelo reentrenado y la probabilidad del último mes.
+* **Modelo**, en etapas/modelo.py. Maneja el modelo vigente: lo entrena la primera vez, lo monitorea cada semana, lo recalibra si hace falta y entrega la probabilidad del último mes.
 * **Índice**, en etapas/indice.py. Entrega el índice en dos niveles por distrito y escribe la carpeta data.
 * **Salidas**, en etapas/salidas.py. Escribe el plan en Excel y, si está configurada, la base de datos.
 
@@ -82,7 +83,13 @@ Cada fuente se reconoce por el nombre del archivo, sin distinguir mayúsculas ni
 
 **Las variables del modelo.** Historial acumulado de vegetación, eventos de vegetación de los últimos doce meses, interrupciones totales de los últimos doce meses y estacionalidad. Por los acuerdos de la reunión N°3, el modelo no usa ninguna de las tres variables que el índice de criticidad ya cuenta por su lado: el reloj de poda, que son los meses desde la última poda; la criticidad por SAIDI; y la exposición por clientes y potencia instalada. Así no se cuenta dos veces el mismo criterio. Las interrupciones sí entran, porque Pluz las pidió como indicador principal, aunque tienen una correlación de 0,82 con el SAIDI; el benchmark lo mide en cada corrida.
 
-**Medir antes de publicar.** En cada corrida el modelo se entrena con los meses antiguos, deja tres meses de separación y se prueba con los últimos cinco meses que ya tienen su ventana completa, contra la regla por historial, que es lo que Pluz podría hacer hoy sin modelo. Después se reentrena con todos los meses que ya tienen resultado, y ese es el modelo que predice. Si en la prueba queda más de 10 puntos de cobertura por debajo de la regla, la corrida no publica: algo cambió en los datos y alguien tiene que revisarlo antes de que llegue a la página.
+**Un modelo estable, monitoreado cada semana.** El modelo no se reentrena por calendario: se entrena una vez y queda como modelo vigente, con una ficha que registra sus variables, los meses con que se entrenó y cómo rindió fuera de muestra. Cada semana predice con ese modelo y lo monitorea en los meses que ya tienen su ventana de tres meses completa y que no vio al entrenarse. Se miden dos cosas. La primera es si sigue ordenando al menos tan bien como la regla por historial. La segunda es si su probabilidad sigue calibrada, es decir, si la frecuencia observada se parece a la probabilidad promedio que declara.
+
+**Recalibrar en vez de reentrenar.** Si la probabilidad se descalibra, por ejemplo porque cambió la frecuencia de cortes, se ajusta solo su escala con una recalibración logística sobre los meses nuevos. El orden del ranking no cambia, así que el índice y el plan tampoco: lo único que cambia es que el riesgo a tres meses vuelve a leerse como una frecuencia real. El reentrenamiento queda para cuando el monitoreo muestra que el ordenamiento cayó frente a la regla por historial, y se hace con una orden explícita, después de revisar qué cambió en los datos. Se probó con un modelo entrenado hasta enero de 2026 y medido en los cuatro meses siguientes: siguió ordenando mejor que la regla y dentro de la banda de calibración, sin pedir nada.
+
+**Medir antes de guardar un modelo nuevo.** Cuando se entrena, la primera vez o con la orden reentrenar, el modelo se mide fuera de muestra: se entrena con los meses antiguos, deja tres meses de separación y se prueba con los últimos cinco meses que ya tienen su ventana completa, contra la regla por historial. Si queda más de 10 puntos de cobertura por debajo, no se guarda ni se publica: algo cambió en los datos y alguien tiene que revisarlo. Si pasa, se entrena con todos los meses que ya tienen resultado y queda como modelo vigente.
+
+**Parámetros del monitoreo**, en config.py: MESES_MINIMOS_MONITOREO, que son 3 meses nuevos antes de decidir nada; BANDA_CALIBRACION, que acepta una razón entre frecuencia observada y probabilidad media entre 0,8 y 1,25; EVENTOS_MINIMOS_CALIBRACION, 50 eventos para recalibrar; y MARGEN_PR_AUC y MARGEN_COBERTURA, la caída frente a la regla que lleva a recomendar el reentrenamiento.
 
 **El índice.** Probabilidad con peso 0,40, reloj de poda con 0,20, criticidad por SAIDI con 0,20 y exposición por clientes y potencia con 0,20, cada componente como percentil dentro del distrito. El plan por alimentador toma un tercio de los alimentadores del distrito. El plan por subestación del piloto usa la capacidad de poda que el distrito registró en el último año completo; fuera del piloto ese registro está incompleto y se usa la misma proporción que en Los Olivos.
 
@@ -116,7 +123,7 @@ python pipeline/actualizar.py benchmark
 python pipeline/actualizar.py mlflow
 ```
 
-La primera orden compara, con la misma partición temporal del pipeline, la regla por historial, la regresión logística vigente, la regresión logística ponderada, el refuerzo de gradiente de histograma, Random Forest, XGBoost, LightGBM y SVM. Los hiperparámetros y el umbral de cada modelo se eligen en una validación interna, separada de la prueba por tres meses, y la prueba no interviene en ninguna elección. Escribe un reporte interactivo con D3 en pipeline/salidas/benchmark/benchmark_modelos.html, que se abre sin conexión, deja una copia en la carpeta benchmark de la raíz para publicarla en GitHub Pages como segundo enlace, y registra cada modelo en MLflow. La segunda orden abre MLflow en el navegador.
+La primera orden compara, con la misma partición temporal del pipeline, la regla por historial, la regresión logística vigente, la regresión logística ponderada, el refuerzo de gradiente de histograma, Random Forest, XGBoost, LightGBM y SVM. Los hiperparámetros de cada modelo y el punto de operación común se eligen en una validación interna, separada de la prueba por tres meses, y la prueba no interviene en ninguna elección. Escribe un reporte interactivo con D3 en pipeline/salidas/benchmark/benchmark_modelos.html, que se abre sin conexión, deja una copia en la carpeta benchmark de la raíz para publicarla en GitHub Pages como segundo enlace, y registra cada modelo en MLflow. La segunda orden abre MLflow en el navegador.
 
 El reporte incluye la tabla de métricas (ROC AUC, PR AUC, Brier, pérdida logarítmica, precisión, exhaustividad, F1, F2 y cobertura de las listas de 20, 40 y 80), las curvas ROC y de precisión y exhaustividad, la calibración, las curvas de pérdida por iteración y de aprendizaje, las matrices de confusión, la correlación entre las variables del modelo y las del índice, el aporte de cada bloque de variables y ejemplos reales de verdaderos y falsos positivos y negativos contrastados con lo que pasó.
 

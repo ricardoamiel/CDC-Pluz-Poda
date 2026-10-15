@@ -7,13 +7,14 @@ Uso, desde la raíz del repositorio:
     python pipeline/actualizar.py validar    solo revisa que los lotes cumplan el contrato
     python pipeline/actualizar.py calcular   calcula todo, pero no toca data/
     python pipeline/actualizar.py forzar     publica aunque el modelo quede bajo la regla
+    python pipeline/actualizar.py reentrenar entrena un modelo vigente nuevo y publica
     python pipeline/actualizar.py ver        abre la página en el navegador, en local
     python pipeline/actualizar.py subir      sube data/ a GitHub, previa confirmación
     python pipeline/actualizar.py geografia  vuelve a bajar los límites de los distritos
     python pipeline/actualizar.py instalar   instala las bibliotecas, una sola vez
     python pipeline/actualizar.py instalar base   agrega las de la base de datos PostgreSQL
     python pipeline/actualizar.py benchmark  compara modelos y genera el reporte interactivo
-    python pipeline/actualizar.py mlflow     abre MLflow con las corridas del benchmark
+    python pipeline/actualizar.py mlflow     abre MLflow: benchmark y monitoreo del modelo vigente
 
 Etapas de la corrida completa:
     1. fuentes          localiza los archivos en los lotes y valida columnas
@@ -34,8 +35,8 @@ sys.path.insert(0, str(PIPELINE))
 
 import config  # noqa: E402
 
-ORDENES = ["completa", "validar", "calcular", "forzar", "ver", "subir", "geografia", "instalar",
-           "benchmark", "mlflow"]
+ORDENES = ["completa", "validar", "calcular", "forzar", "reentrenar", "ver", "subir", "geografia",
+           "instalar", "benchmark", "mlflow"]
 
 # Si el modelo queda claramente peor que la regla por historial, la corrida no publica:
 # algo cambió en los datos y alguien tiene que revisarlo antes de que llegue a la página.
@@ -76,7 +77,29 @@ def reporte_markdown(rep, nombre_mes):
     lineas += ["", "## Avisos", ""]
     lineas += [f"* {a}." for a in rep["fuentes"]["avisos"]] or ["* Ninguno."]
     lineas += [
-        "", "## Desempeño fuera de muestra", "",
+        "", "## Modelo vigente", "",
+        f"Entrenado el {rep['modelo_vigente']['entrenado']}, con los meses hasta "
+        f"{mes(rep['modelo_vigente']['entrenado_hasta'])}. "
+        + ("Tiene una recalibración de la probabilidad aplicada." if rep["modelo_vigente"]["calibracion"]
+           else "No tiene recalibraciones."), "",
+    ]
+    mon = rep.get("monitoreo")
+    if not mon:
+        lineas.append("Se entrenó en esta corrida, así que todavía no hay monitoreo.")
+    elif "pr_auc_modelo" not in mon:
+        lineas.append(f"Monitoreo: {mon['lectura']}")
+    else:
+        lineas += [
+            f"Monitoreo en {mon['meses_nuevos']} meses nuevos, de {mes(mon['desde'])} a {mes(mon['hasta'])}, "
+            f"con {mon['eventos']} eventos:", "",
+            f"* PR AUC: modelo {dec(mon['pr_auc_modelo'])}, regla {dec(mon['pr_auc_regla'])}.",
+            f"* Cobertura con lista de 40: modelo {pct(mon['cobertura_40_modelo'])}, regla {pct(mon['cobertura_40_regla'])}.",
+            f"* Frecuencia observada sobre probabilidad media: {dec(mon['razon_observado_esperado'], 2)}.",
+            f"* Recalibración: {'aplicada' if mon.get('recalibrado') else 'no hizo falta' if not mon['recalibrar'] else 'pendiente por pocos eventos'}.",
+            f"* Reentrenamiento: {'recomendado' if mon['reentrenamiento_recomendado'] else 'no hace falta'}.",
+        ]
+    lineas += [
+        "", "## Desempeño medido al entrenar el modelo vigente", "",
         f"El modelo se entrenó con los cortes de {mes(v['entrenamiento'][0])} a "
         f"{mes(v['entrenamiento'][1])} y se probó con los de {mes(v['prueba'][0])} a "
         f"{mes(v['prueba'][1])}, con una prevalencia de {pct(v['prevalencia_prueba'])}.", "",
@@ -104,8 +127,8 @@ def reporte_markdown(rep, nombre_mes):
     return "\n".join(lineas) + "\n"
 
 
-def corrida(publicar=True, forzar=False):
-    import joblib
+def corrida(publicar=True, forzar=False, reentrenar=False):
+    import pandas as pd
     from etapas import fuentes, base_analitica, modelo, indice, salidas
 
     paso("1. Fuentes: localizar y validar los lotes")
@@ -130,19 +153,47 @@ def corrida(publicar=True, forzar=False):
     print(f"  {len(panel)} filas, {panel['alimentador'].nunique()} alimentadores, "
           f"corte operativo {indice.nombre_mes(corte)}")
 
-    paso("3. Modelo: validación fuera de muestra, entrenamiento y predicción")
+    paso("3. Modelo vigente: monitoreo, calibración y predicción")
     alim_distrito = indice.alimentadores_por_distrito(tablas["guia"])
-    validacion, etiquetados = modelo.validar(panel, inicio, alim_distrito)
-    m, r = validacion["modelo"], validacion["regla"]
-    print(f"  Cobertura con lista de 40: modelo {pct(m['cobertura_40'])}, "
-          f"regla {pct(r['cobertura_40'])}")
-    modelo_final, operativo = modelo.entrenar_y_predecir(panel, etiquetados, corte)
-
-    peor = r["cobertura_40"] - m["cobertura_40"]
-    if publicar and peor > MARGEN_MAXIMO_BAJO_LA_REGLA and not forzar:
-        print(f"  ALTO: el modelo queda {100 * peor:.1f} puntos bajo la regla por historial. "
-              "No se publica; revise el lote o corra la orden forzar.")
-        publicar = False
+    vigente, ficha = (None, None) if reentrenar else modelo.cargar_vigente()
+    monitoreo = None
+    if vigente is None:
+        # Solo se entrena la primera vez o cuando se pide de forma explícita. Antes de guardar
+        # el modelo se mide fuera de muestra: si queda claramente bajo la regla, no se publica.
+        print("  Entrenando el modelo vigente con todos los meses que ya tienen resultado")
+        validacion, etiquetados = modelo.validar(panel, inicio, alim_distrito)
+        m, r = validacion["modelo"], validacion["regla"]
+        print(f"  Medición fuera de muestra, lista de 40: modelo {pct(m['cobertura_40'])}, "
+              f"regla {pct(r['cobertura_40'])}")
+        peor = r["cobertura_40"] - m["cobertura_40"]
+        if peor > MARGEN_MAXIMO_BAJO_LA_REGLA and not forzar:
+            print(f"  ALTO: el modelo queda {100 * peor:.1f} puntos bajo la regla por historial. "
+                  "No se guarda ni se publica; revise el lote o corra la orden forzar.")
+            return
+        vigente, ficha = modelo.entrenar_vigente(etiquetados, validacion)
+        print(f"  Modelo vigente guardado, entrenado hasta {indice.nombre_mes(pd.Period(ficha['entrenado_hasta'], freq='M'))}")
+    else:
+        print(f"  Modelo vigente del {ficha['entrenado']}, entrenado hasta "
+              f"{indice.nombre_mes(pd.Period(ficha['entrenado_hasta'], freq='M'))}")
+        monitoreo, nuevos = modelo.monitorear(vigente, ficha, panel)
+        if monitoreo["meses_nuevos"] == 0 or "pr_auc_modelo" not in monitoreo:
+            print(f"  Monitoreo: {monitoreo.get('lectura', 'sin meses nuevos con resultado.')}")
+        else:
+            print(f"  Monitoreo en {monitoreo['meses_nuevos']} meses nuevos: PR AUC modelo "
+                  f"{monitoreo['pr_auc_modelo']:.3f}, regla {monitoreo['pr_auc_regla']:.3f}; "
+                  f"observado sobre esperado {monitoreo['razon_observado_esperado']:.2f}")
+            if monitoreo["recalibrar"]:
+                ficha, hecho = modelo.recalibrar(vigente, ficha, nuevos)
+                monitoreo["recalibrado"] = hecho
+                print("  Probabilidad recalibrada; el orden del ranking no cambia." if hecho else
+                      "  Hace falta recalibrar, pero todavía no hay eventos suficientes.")
+            if monitoreo["reentrenamiento_recomendado"]:
+                print("  AVISO: el ordenamiento cayó frente a la regla por historial. "
+                      "Se recomienda revisar y correr la orden reentrenar.")
+    validacion = ficha["validacion"]
+    operativo = panel[panel["periodo"] == corte].copy()
+    operativo["probabilidad"] = modelo.predecir(vigente, ficha, operativo)
+    modelo_final = vigente
 
     paso("4. Índice de criticidad por distrito")
     periodo_datos = [indice.nombre_mes(tablas["fallas"]["periodo"].min()),
@@ -165,23 +216,25 @@ def corrida(publicar=True, forzar=False):
     panel.to_csv(config.SALIDAS / "base_analitica_alimentador_mes.csv", index=False)
     operativo[["alimentador", "periodo", "probabilidad"] + config.VARIABLES].sort_values(
         "probabilidad", ascending=False).to_csv(config.SALIDAS / "prediccion.csv", index=False)
-    joblib.dump(modelo_final, config.SALIDAS / "modelo.joblib")
     excel = salidas.escribir_excel(distritos, corte,
                                    config.SALIDAS / f"plan_de_poda_{sufijo}.xlsx")
     print(f"  Plan en Excel: {excel}")
 
     rep = {"fecha": time.strftime("%Y%m%d %H:%M"), "corte": str(corte),
            "ventana": indice.ventana(corte), "fuentes": registro,
-           "validacion": validacion, "publicado": bool(publicar)}
+           "validacion": validacion, "publicado": bool(publicar),
+           "modelo_vigente": {k: ficha[k] for k in ("entrenado", "entrenado_hasta", "calibracion")},
+           "monitoreo": monitoreo}
     rep["base_de_datos"] = salidas.guardar_en_base(tablas, panel, operativo, distritos, rep)
     print(f"  Base de datos: {'actualizada' if rep['base_de_datos'] else 'no configurada'}")
 
-    import pandas as pd
     nombre_mes = lambda t: indice.nombre_mes(pd.Period(t, freq="M"))  # noqa: E731
     (config.SALIDAS / "reporte.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1),
                                                  encoding="utf-8")
     (config.SALIDAS / "reporte.md").write_text(reporte_markdown(rep, nombre_mes),
                                                encoding="utf-8")
+    if modelo.registrar_mlflow(rep):
+        print("  Corrida registrada en MLflow, experimento pluz_modelo_vigente")
     print(f"\nListo. Reporte en {config.SALIDAS / 'reporte.md'}")
     if publicar:
         print("Siguiente paso: revisar con la orden ver y publicar con la orden subir.")
@@ -223,7 +276,7 @@ def benchmark():
 def abrir_mlflow(puerto=5000):
     base = config.SALIDAS / "mlflow.db"
     if not base.exists():
-        print("Primero hay que correr la orden benchmark.")
+        print("Todavía no hay corridas registradas: corra la actualización o el benchmark.")
         return
     print(f"MLflow en http://127.0.0.1:{puerto}. Cierre con Ctrl y C.")
     webbrowser.open(f"http://127.0.0.1:{puerto}")
@@ -288,7 +341,8 @@ def main():
     elif orden == "validar":
         corrida(publicar=None)
     else:
-        corrida(publicar=orden != "calcular", forzar=orden == "forzar")
+        corrida(publicar=orden != "calcular", forzar=orden == "forzar",
+                reentrenar=orden == "reentrenar")
 
 
 if __name__ == "__main__":
