@@ -120,6 +120,13 @@ MESES_PRUEBA = 5             # cortes finales reservados para medir fuera de mue
 MESES_EMBARGO = 3            # separación entre entrenamiento y prueba
 C_REGULARIZACION = 0.05      # elegido en la fase 4 con validación de origen móvil
 
+# Modelo alternativo que la página permite comparar con el vigente: XGBoost, con los
+# hiperparámetros que eligió el benchmark en la validación interna. Se entrena junto con el
+# vigente y con los mismos datos; no reemplaza al vigente, sirve para ver cuánto cambiaría el
+# ranking con un modelo más complejo.
+MODELO_ALTERNO = {"nombre": "XGBoost", "max_depth": 3, "min_child_weight": 20,
+                  "n_estimators": 49, "learning_rate": 0.05}
+
 # Monitoreo del modelo vigente. El modelo no se reentrena por calendario: se mide cada semana
 # en los meses que ya tienen su ventana completa y que no vio al entrenarse.
 MESES_MINIMOS_MONITOREO = 3      # meses nuevos necesarios para decidir algo

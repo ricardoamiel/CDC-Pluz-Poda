@@ -132,6 +132,53 @@ def cargar_vigente():
     return joblib.load(VIGENTE), ficha
 
 
+ALTERNO = config.SALIDAS / "modelo_alterno.joblib"
+
+
+def entrenar_alterno(etiquetados):
+    """Entrena el modelo alternativo con los mismos meses y variables que el vigente."""
+    import joblib
+    from xgboost import XGBClassifier
+    p = config.MODELO_ALTERNO
+    modelo = XGBClassifier(n_estimators=p["n_estimators"], learning_rate=p["learning_rate"],
+                           max_depth=p["max_depth"], min_child_weight=p["min_child_weight"],
+                           subsample=0.8, colsample_bytree=0.8, reg_lambda=1.0,
+                           eval_metric="logloss", random_state=config.SEMILLA, n_jobs=4)
+    modelo.fit(etiquetados[config.VARIABLES], etiquetados["objetivo"].astype(int))
+    modelo.variables_ = list(config.VARIABLES)
+    joblib.dump(modelo, ALTERNO)
+    return modelo
+
+
+def cargar_alterno():
+    import joblib
+    if not ALTERNO.exists():
+        return None
+    modelo = joblib.load(ALTERNO)
+    return modelo if getattr(modelo, "variables_", None) == list(config.VARIABLES) else None
+
+
+def predecir_alterno(modelo, datos):
+    return modelo.predict_proba(datos[config.VARIABLES])[:, 1]
+
+
+def motivos_alterno(modelo, datos, n=3):
+    """Razones del modelo alternativo: las contribuciones por variable que entrega XGBoost."""
+    from xgboost import DMatrix
+    aportes = modelo.get_booster().predict(DMatrix(datos[config.VARIABLES]), pred_contribs=True)[:, :-1]
+    salida = []
+    for fila in aportes:
+        razones = []
+        for j in np.argsort(-fila):
+            if fila[j] <= 0 or len(razones) == n:
+                break
+            texto = config.MOTIVOS[config.VARIABLES[j]]
+            if texto not in razones:
+                razones.append(texto)
+        salida.append(razones)
+    return salida
+
+
 def _logit(p):
     p = np.clip(p, 1e-6, 1 - 1e-6)
     return np.log(p / (1 - p))
@@ -236,6 +283,9 @@ def registrar_mlflow(rep):
     if mlflow.get_experiment_by_name(nombre) is None:
         mlflow.create_experiment(nombre, artifact_location=(config.SALIDAS / "mlruns").as_uri())
     mlflow.set_experiment(nombre)
+    # Sin esta etiqueta, MLflow 3 no sabe que es un experimento de entrenamiento de modelos y
+    # abre su vista de aplicaciones generativas en lugar de la tabla de corridas.
+    mlflow.set_experiment_tag("mlflow.experimentKind", "custom_model_development")
     vig, mon, val = rep["modelo_vigente"], rep.get("monitoreo") or {}, rep["validacion"]
     with mlflow.start_run(run_name=f"corte {rep['corte']}, corrida {rep['fecha']}"):
         mlflow.set_tags({"corte": rep["corte"], "entrenado": vig["entrenado"],
@@ -256,4 +306,29 @@ def registrar_mlflow(rep):
         reporte = config.SALIDAS / "reporte.md"
         if reporte.exists():
             mlflow.log_artifact(str(reporte))
+    _seguimiento(mlflow, metricas)
     return True
+
+
+def _seguimiento(mlflow, metricas):
+    """Agrega un punto al run de seguimiento semanal, que se reabre en cada corrida.
+
+    Cada corrida tiene además su propio run, pero ahí cada métrica es un solo valor y MLflow
+    la compara entre corridas como barras. En el seguimiento la misma métrica se registra
+    una vez por semana, con el paso 1, 2, 3, de modo que se lee como una línea en el tiempo.
+    """
+    cliente = mlflow.MlflowClient()
+    experimento = mlflow.get_experiment_by_name("pluz_modelo_vigente")
+    previos = cliente.search_runs([experimento.experiment_id], "tags.tipo = 'seguimiento'", max_results=1)
+    if previos:
+        run_id = previos[0].info.run_id
+        historia = cliente.get_metric_history(run_id, "meses_nuevos_monitoreados")
+        paso = len(historia) + 1
+    else:
+        run_id = cliente.create_run(experimento.experiment_id, run_name="seguimiento semanal",
+                                    tags={"tipo": "seguimiento"}).info.run_id
+        paso = 1
+    marca = int(time.time() * 1000)
+    for clave, valor in metricas.items():
+        cliente.log_metric(run_id, clave, float(valor), timestamp=marca, step=paso)
+    cliente.set_terminated(run_id)

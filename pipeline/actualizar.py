@@ -158,6 +158,7 @@ def corrida(publicar=True, forzar=False, reentrenar=False):
     paso("3. Modelo vigente: monitoreo, calibración y predicción")
     alim_distrito = indice.alimentadores_por_distrito(tablas["guia"])
     vigente, ficha = (None, None) if reentrenar else modelo.cargar_vigente()
+    recien_entrenado = vigente is None
     monitoreo = None
     if vigente is None:
         # Solo se entrena la primera vez o cuando se pide de forma explícita. Antes de guardar
@@ -207,9 +208,35 @@ def corrida(publicar=True, forzar=False, reentrenar=False):
         print(f"  {mt['distrito']}: {mt['n_alimentadores']} alimentadores, "
               f"{mt['n_subestaciones']} SED aéreas, plan de {mt['k_alimentadores']} "
               f"alimentadores o {mt['capacidad_mes']} subestaciones")
+    # Modelo alternativo, solo para comparar en la página: se entrena con el vigente, con los
+    # mismos meses, y se reutiliza mientras el vigente no cambie.
+    alterno = None if recien_entrenado else modelo.cargar_alterno()
+    if alterno is None:
+        etiq = panel[(panel["periodo"] >= inicio) & panel["objetivo"].notna()]
+        alterno = modelo.entrenar_alterno(etiq)
+        print(f"  Modelo alternativo {config.MODELO_ALTERNO['nombre']} entrenado con los mismos meses")
+    operativo_alt = operativo.copy()
+    operativo_alt["probabilidad"] = modelo.predecir_alterno(alterno, operativo_alt)
+    distritos_alt, _ = indice.construir_distritos(
+        tablas, operativo_alt, alterno, corte, periodo_datos,
+        motivos_fn=lambda d: modelo.motivos_alterno(alterno, d), solo=[config.PILOTO],
+        nombre_modelo=config.MODELO_ALTERNO["nombre"])
+    codigo = config.DISTRITOS[config.PILOTO][0]
+    for nivel, k in (("alimentadores", distritos[codigo]["meta"]["k_alimentadores"]),
+                     ("subestaciones", distritos[codigo]["meta"]["capacidad_mes"])):
+        a = {u["id"]: u["puesto"] for u in distritos[codigo][nivel]}
+        b = {u["id"]: u["puesto"] for u in distritos_alt[codigo][nivel]}
+        comunes = [i for i in a if i in b]
+        rho = pd.Series([a[i] for i in comunes]).corr(pd.Series([b[i] for i in comunes]), method="spearman")
+        coinciden = len({i for i in a if a[i] <= k} & {i for i in b if b[i] <= k})
+        print(f"  Piloto por {nivel}: correlación de orden entre modelos {rho:.3f}; "
+              f"{coinciden} de {k} unidades del plan coinciden")
+
     if publicar:
         print("  Publicando en data:")
         for nombre, kb in indice.publicar(distritos).items():
+            print(f"    {nombre}: {kb} kB")
+        for nombre, kb in indice.publicar_alterno(distritos_alt).items():
             print(f"    {nombre}: {kb} kB")
 
     paso("5. Salidas para la operación")
@@ -280,8 +307,15 @@ def abrir_mlflow(puerto=5000):
     if not base.exists():
         print("Todavía no hay corridas registradas: corra la actualización o el benchmark.")
         return
-    print(f"MLflow en http://127.0.0.1:{puerto}. Cierre con Ctrl y C.")
-    webbrowser.open(f"http://127.0.0.1:{puerto}")
+    # Se abre directo en el seguimiento del modelo vigente, que es lo que se mira cada semana.
+    import sqlite3
+    with sqlite3.connect(base) as conexion:
+        fila = conexion.execute("select experiment_id from experiments where name = ?",
+                                ("pluz_modelo_vigente",)).fetchone()
+    url = f"http://127.0.0.1:{puerto}/#/experiments/{fila[0]}" if fila else f"http://127.0.0.1:{puerto}"
+    print(f"MLflow en {url}. Cierre con Ctrl y C. Mientras está abierto, use otra terminal.")
+    threading_timer = __import__("threading").Timer(4, lambda: webbrowser.open(url))
+    threading_timer.start()
     subprocess.run([sys.executable, "-m", "mlflow", "ui", "--backend-store-uri", f"sqlite:///{base}",
                     "--port", str(puerto)], cwd=config.SALIDAS)
 

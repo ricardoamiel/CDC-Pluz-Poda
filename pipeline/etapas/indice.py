@@ -55,7 +55,8 @@ def alimentadores_por_distrito(guia):
             for d in config.DISTRITOS}
 
 
-def construir_distritos(tablas, operativo, modelo, corte, periodo_datos):
+def construir_distritos(tablas, operativo, modelo, corte, periodo_datos, motivos_fn=None, solo=None,
+                        nombre_modelo="Regresión logística sin SAIDI ni clientes"):
     guia, poda, saidi = tablas["guia"], tablas["poda"], tablas["saidi_ltm"]
     alim_distrito = alimentadores_por_distrito(guia)
     operativo = operativo.copy()
@@ -67,6 +68,9 @@ def construir_distritos(tablas, operativo, modelo, corte, periodo_datos):
 
     # El piloto va primero: su capacidad fija la proporción de los demás.
     orden = [config.PILOTO] + [d for d in config.DISTRITOS if d != config.PILOTO]
+    if solo:
+        orden = [d for d in orden if d in solo]
+    motivos_fn = motivos_fn or (lambda datos: motivos(modelo, datos))
     for distrito in orden:
         codigo, nombre, _ = config.DISTRITOS[distrito]
         gd = guia[guia["DISTRITO"] == distrito]
@@ -83,7 +87,7 @@ def construir_distritos(tablas, operativo, modelo, corte, periodo_datos):
                                        sed_aereas=("SED", "nunique"),
                                        lon=("lon", "mean"), lat=("lat", "mean")).reset_index()
         alim = calcular_indice(op.merge(expo, left_on="alimentador", right_on="ALIM"))
-        alim["motivos"] = motivos(modelo, alim)
+        alim["motivos"] = motivos_fn(alim)
 
         # Capacidad del plan por subestación: la mediana mensual de podas registradas el
         # último año completo en los alimentadores del distrito. Fuera del piloto el
@@ -122,10 +126,12 @@ def construir_distritos(tablas, operativo, modelo, corte, periodo_datos):
             "distrito": nombre, "codigo": codigo, "corte": str(corte),
             "ventana": ventana(corte), "horizonte_meses": config.HORIZONTE_MESES,
             "periodo_datos": periodo_datos,
+            # Último día con interrupciones registradas: es la fecha que lee el usuario.
+            "fecha_datos": str(tablas["fallas"]["Inicio"].max().date()),
             "pesos": config.PESOS, "nombres_componentes": dict(config.COMPONENTES),
             "capacidad_mes": capacidad, "capacidad_registro_poda": capacidad_registro,
             "capacidad_regla": regla, "k_alimentadores": k_alim,
-            "modelo": "Regresión logística sin SAIDI ni clientes",
+            "modelo": nombre_modelo,
             "variables_modelo": [config.NOMBRES_VARIABLES[v] for v in config.VARIABLES],
             "generado": pd.Timestamp.today().strftime("%Y-%m-%d"),
             "n_alimentadores": int(len(alim)), "n_subestaciones": int(len(sed)),
@@ -169,6 +175,13 @@ def _escribir(nombre, variable, contenido):
     (config.DATA_WEB / f"{nombre}.js").write_text(f"window.{variable} = {texto};\n",
                                                   encoding="utf-8")
     return round(len(texto.encode()) / 1024)
+
+
+def publicar_alterno(distritos_alterno):
+    """Escribe el piloto calculado con el modelo alternativo, para el selector de la página."""
+    codigo = config.DISTRITOS[config.PILOTO][0]
+    return {"criticidad_los_olivos_alterno": _escribir("criticidad_los_olivos_alterno",
+                                                       "DATOS_PLUZ_ALTERNO", distritos_alterno[codigo])}
 
 
 def publicar(distritos):

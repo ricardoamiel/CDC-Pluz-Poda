@@ -98,6 +98,11 @@ Cada fuente se reconoce por el nombre del archivo, sin distinguir mayúsculas ni
 **El índice.** Probabilidad con peso 0,40, reloj de poda con 0,20, criticidad por SAIDI con 0,20 y exposición por clientes y potencia con 0,20, cada componente como percentil dentro del distrito. El plan por alimentador toma un tercio de los alimentadores del distrito. El plan por subestación del piloto usa la capacidad de poda que el distrito registró en el último año completo; fuera del piloto ese registro está incompleto y se usa la misma proporción que en Los Olivos.
 
 
+## Modelo alternativo para comparar
+
+Junto con el modelo vigente se entrena un modelo alternativo, XGBoost, con los mismos meses, las mismas variables y los hiperparámetros que eligió el benchmark, definidos en MODELO_ALTERNO dentro de config.py. Se guarda en pipeline/salidas/modelo_alterno.joblib y se reutiliza mientras el vigente no cambie. Con él se calcula el índice del piloto y se escribe data/criticidad_los_olivos_alterno.js, que la página usa en el selector de modelo. Sus razones por unidad salen de las contribuciones por variable que entrega XGBoost. No reemplaza al vigente: sirve para mostrar cuánto cambiaría el ranking con un modelo más complejo. Cada corrida imprime la correlación de orden y cuántas unidades del plan coinciden entre los dos.
+
+
 ## Cómo leer los meses desde la última poda
 
 El reloj de poda cuenta los meses transcurridos entre la última poda registrada del alimentador y el mes del corte. Hay dos casos que conviene no confundir:

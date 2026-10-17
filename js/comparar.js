@@ -91,7 +91,7 @@
     { clave: "sed_aereas", nombre: "Subestaciones aéreas, expuestas a vegetación", fmt: miles },
     { clave: "clientes_expuestos", nombre: "Clientes de baja tensión en red aérea", fmt: miles },
     { clave: "riesgo_medio", nombre: "Riesgo medio estimado a 3 meses por alimentador", fmt: pct },
-    { clave: "saidi_ltm", nombre: "SAIDI del último año", fmt: (v) => coma(v, 2) },
+    { clave: "saidi_ltm", nombre: "SAIDI del último año, en minutos", fmt: (v) => `${coma(v, 2)} min` },
     { clave: "interrupciones_12m", nombre: "Interrupciones del último año", fmt: miles },
     { clave: "cortes_vegetacion", nombre: "Cortes con interferencia probable de vegetación", fmt: miles },
     { clave: "cortes_veg_por_100_sed", nombre: "Cortes por vegetación por cada 100 subestaciones aéreas",
@@ -300,7 +300,7 @@
     $(`#top-${lado_}`).innerHTML = `
       <table class="tabla">
         <caption class="oculto">Primeras unidades del plan del distrito</caption>
-        <thead><tr><th scope="col">N°</th><th scope="col">Unidad</th><th scope="col">Índice</th><th scope="col" class="num">Riesgo a 3 meses</th></tr></thead>
+        <thead><tr><th scope="col">N°</th><th scope="col">Unidad</th><th scope="col">Índice</th><th scope="col" class="num" title="Probabilidad de al menos un corte por vegetación en los próximos 3 meses">Prob. de corte, 3 meses</th></tr></thead>
         <tbody>${filas}</tbody>
       </table>`;
   }
@@ -317,10 +317,10 @@
       `<div class="ficha-indice"><span class="ficha-chip" style="background:${escala(u.indice)}"></span>` +
       `<span class="ficha-indice-num">${coma(u.indice, 0)}</span><span class="ficha-indice-de">índice<br>de 100</span></div>` +
       // Los mismos cinco datos y en el mismo orden que la ficha de la pestaña del piloto.
-      `<dl><dt>Riesgo a 3 meses</dt><dd>${pct(u.probabilidad)}</dd>` +
+      `<dl><dt>Probabilidad de corte por vegetación, 3 meses</dt><dd>${pct(u.probabilidad)}</dd>` +
       `<dt>Sin poda</dt><dd>${textoPoda(u)}</dd>` +
       `<dt>Clientes</dt><dd>${miles(u.clientes)}</dd>` +
-      `<dt>SAIDI, último año</dt><dd>${coma(u.saidi_ltm, 2)}</dd>` +
+      `<dt>SAIDI, último año</dt><dd>${coma(u.saidi_ltm, 2)} min</dd>` +
       `<dt>Interrupciones, último año</dt><dd>${miles(u.interrupciones_12m)}</dd></dl>` +
       (enPlan.has(u.id) ? '<span class="pastilla">Entra al plan</span>' : "");
     ficha.hidden = false;

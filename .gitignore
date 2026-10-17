@@ -13,3 +13,4 @@ __pycache__/
 # Contexto interno del proyecto: evaluaciones, acuerdos con Pluz y observaciones del curso.
 # No se publica porque el repositorio es público.
 Readme-contexto.md
+flujo-de-datos.txt

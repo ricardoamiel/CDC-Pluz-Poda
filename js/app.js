@@ -28,10 +28,23 @@
 (function () {
   "use strict";
 
-  const DATOS = window.DATOS_PLUZ;
-  const META = DATOS.meta;
+  // Dos modelos de riesgo para el mismo piloto: el vigente y uno alternativo para comparar.
+  // Cambiar de modelo solo cambia la probabilidad y, con ella, el índice y el ranking.
+  const MODELOS = { 1: window.DATOS_PLUZ, 2: window.DATOS_PLUZ_ALTERNO };
+  let DATOS = MODELOS[1];
+  let META = DATOS.meta;
   // Periodo que cubren los datos, escrito por el pipeline en cada actualización.
   const [INICIO_DATOS, FIN_DATOS] = META.periodo_datos || ["enero de 2024", "agosto de 2026"];
+  // Fecha del último dato en palabras, para el sello y el pie. Si una corrida antigua no la
+  // trae, se usa el mes de corte.
+  const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+    "setiembre", "octubre", "noviembre", "diciembre"];
+  function fechaDatos() {
+    const f = META.fecha_datos;
+    if (!f) return FIN_DATOS;
+    const [a, m, d] = f.split("-").map(Number);
+    return `${d} de ${MESES[m - 1]} de ${a}`;
+  }
   // Límite administrativo y avenidas de Los Olivos, de OpenStreetMap.
   const GEO = window.GEO_LOS_OLIVOS;
 
@@ -64,6 +77,7 @@
     fijado: null,
     // Filtros de exploración. No cambian el plan, que lo define siempre el corte: sirven
     // para resaltar un subconjunto a la vez en todas las vistas.
+    modelo: 1,          // 1 vigente, 2 alternativo
     tramo: null,        // índice del paso de la rampa, 0 a 6
     alimentador: null,  // código de alimentador
   };
@@ -119,11 +133,18 @@
 
   /* ------------------------------------------------- índices y datos derivados */
 
-  const porAlimentador = new Map(DATOS.alimentadores.map((d) => [d.id, d]));
-  const porSubestacion = new Map(DATOS.subestaciones.map((d) => [d.id, d]));
-  // Solo se dibujan las subestaciones cuyo alimentador tiene índice, para que ninguna
-  // celda del mapa quede sin valor que mostrar.
-  const subestacionesMapa = DATOS.subestaciones.filter((d) => porAlimentador.has(d.alimentador));
+  // Mediana de cada componente por nivel, que se recalcula al cambiar de modelo.
+  const cacheMedianas = new Map();
+  let porAlimentador, porSubestacion, subestacionesMapa;
+  function indexar() {
+    porAlimentador = new Map(DATOS.alimentadores.map((d) => [d.id, d]));
+    porSubestacion = new Map(DATOS.subestaciones.map((d) => [d.id, d]));
+    // Solo se dibujan las subestaciones cuyo alimentador tiene índice, para que ninguna
+    // celda del mapa quede sin valor que mostrar.
+    subestacionesMapa = DATOS.subestaciones.filter((d) => porAlimentador.has(d.alimentador));
+    cacheMedianas.clear();
+  }
+  indexar();
 
   // Los cuatro componentes en orden de peso, con el peso al lado. El índice es la suma de
   // valor × peso, así que el orden por peso es también el orden en el que se apilan.
@@ -141,7 +162,6 @@
   // es alto o bajo en este piloto en lugar de dejar la cifra sola. Se calcula una vez por
   // nivel: el detalle se redibuja en cada paso del puntero y no vale la pena recorrer las
   // 252 subestaciones cada vez.
-  const cacheMedianas = new Map();
   function medianas() {
     if (cacheMedianas.has(estado.nivel)) return cacheMedianas.get(estado.nivel);
     const us = unidades();
@@ -749,7 +769,12 @@
       });
     tr.selectAll("td").remove();
 
-    tr.append("td").attr("class", "celda-puesto").text((d) => d.puesto);
+    tr.append("td").attr("class", "celda-puesto").html((d) => {
+      const otro = puestoOtro(d);
+      if (otro === null || otro === d.puesto) return `${d.puesto}`;
+      const sube = otro > d.puesto;
+      return `${d.puesto}<span class="cambio ${sube ? "sube" : "baja"}" title="Puesto ${otro} con el otro modelo">${sube ? "▲" : "▼"}${Math.abs(otro - d.puesto)}</span>`;
+    });
     tr.append("td").attr("class", "celda-id").html((d) =>
       estado.nivel === "alimentadores"
         ? `${d.id}<span class="celda-sub">${d.sed_aereas} subestaciones aéreas</span>`
@@ -892,7 +917,7 @@
     $("#kpi-clientes-pie").textContent = totalClientes
       ? `${coma((clientes / totalClientes) * 100, 0)} % de los clientes del piloto` : "-";
 
-    $("#kpi-saidi").textContent = coma(saidiPlan, 2);
+    $("#kpi-saidi").textContent = `${coma(saidiPlan, 2)} min`;
     $("#kpi-saidi-pie").textContent = saidiTotal
       ? `${coma((saidiPlan / saidiTotal) * 100, 0)} % del SAIDI del piloto, ` +
         `${alimPlan.length} ${alimPlan.length === 1 ? "alimentador" : "alimentadores"}` : "-";
@@ -1105,10 +1130,10 @@
         '<span class="ficha-indice-de">índice<br>de 100</span>' +
       "</div>" +
       "<dl>" +
-      `<dt>Riesgo a 3 meses</dt><dd>${pct(u.probabilidad)}</dd>` +
+      `<dt>Probabilidad de corte por vegetación, 3 meses</dt><dd>${pct(u.probabilidad)}</dd>` +
       `<dt>Sin poda</dt><dd>${textoPoda(u)}</dd>` +
       `<dt>Clientes</dt><dd>${miles(u.clientes)}</dd>` +
-      `<dt>SAIDI, último año</dt><dd>${coma(u.saidi_ltm, 2)}</dd>` +
+      `<dt>SAIDI, último año</dt><dd>${coma(u.saidi_ltm, 2)} min</dd>` +
       `<dt>Interrupciones, último año</dt><dd>${miles(u.interrupciones_12m)}</dd>` +
       "</dl>" +
       (enPlan ? `<span class="pastilla">${icono("i-tilde")}Entra al plan</span>` : "");
@@ -1192,14 +1217,14 @@
           </div>
           <div class="detalle-ident">
             <h4>${u.id}</h4>
-            <p>Puesto ${u.puesto} de ${unidades().length} ${etiquetaNivel()}</p>
+            <p>Puesto ${u.puesto} de ${unidades().length} ${etiquetaNivel()}${puestoOtro(u) !== null ? `; puesto ${puestoOtro(u)} con el otro modelo` : ""}</p>
             <span class="etiqueta-plan${enPlan ? "" : " fuera-plan"}">
               ${icono(enPlan ? "i-tilde" : "i-reloj")}${enPlan ? "Entra al plan" : "Fuera del plan actual"}
             </span>
           </div>
         </div>
         <dl>
-          <dt>${icono("i-medidor")}Riesgo estimado a 3 meses</dt><dd>${pct(u.probabilidad)}</dd>
+          <dt>${icono("i-medidor")}Probabilidad de al menos un corte por vegetación en los próximos 3 meses</dt><dd>${pct(u.probabilidad)}</dd>
           <dt>${icono("i-reloj")}Meses desde la última poda</dt><dd>${textoPoda(u, false)}</dd>
           <dt>${icono("i-clientes")}Clientes de baja tensión</dt><dd>${miles(u.clientes)}</dd>
           <dt>${icono("i-alerta")}Interrupciones del alimentador, último año</dt><dd>${miles(u.interrupciones_12m)}</dd>
@@ -1218,7 +1243,7 @@
           </div>
         </div>
         <div class="comp-tabla">${filas}</div>
-        <p class="comp-nota">${icono("i-info")}<span>Cada componente es un percentil de 0 a 100 dentro del piloto. La marca gris sobre cada barra es la mediana de ${articulo()} ${unidades().length} ${etiquetaNivel()}.</span></p>
+        <p class="comp-nota">${icono("i-info")}<span>El índice va de 0 a 100: 100 es la unidad más urgente del distrito. Cada componente es un percentil de 0 a 100 dentro del piloto. La marca gris sobre cada barra es la mediana de ${articulo()} ${unidades().length} ${etiquetaNivel()}.</span></p>
       </div>
 
       <div class="bloque">
@@ -1228,7 +1253,7 @@
           <dt>${icono("i-alerta")}Eventos históricos del alimentador</dt><dd>${alimentador ? alimentador.eventos_historicos : "-"}</dd>
           <dt>${icono("i-reloj")}Eventos por vegetación del último año</dt><dd>${alimentador ? alimentador.eventos_12m : "-"}</dd>
           <dt>${icono("i-alerta")}Interrupciones desde ${INICIO_DATOS}</dt><dd>${alimentador ? miles(alimentador.interrupciones_hist) : "-"}</dd>
-          <dt>${icono("i-medidor")}SAIDI de los últimos 12 meses</dt><dd>${alimentador ? coma(alimentador.saidi_ltm, 2) : "-"}</dd>
+          <dt>${icono("i-medidor")}SAIDI de los últimos 12 meses</dt><dd>${alimentador ? coma(alimentador.saidi_ltm, 2) + " min" : "-"}</dd>
         </dl>
       </div>`;
 
@@ -1241,17 +1266,23 @@
 
   function descargarCsv() {
     const sel = seleccion();
+    // Encabezados en palabras: el archivo lo abre la cuadrilla o el área en Excel, no el
+    // equipo técnico. La probabilidad va en porcentaje y el SAIDI en minutos.
+    const porcentaje = (v) => (v === null || v === undefined ? "" : Math.round(v * 1000) / 10);
     const encabezado = estado.nivel === "alimentadores"
-      ? ["puesto", "alimentador", "indice", "riesgo_3_meses", "meses_sin_poda",
-         "sin_registro_poda", "clientes", "saidi_ultimo_anio", "interrupciones_ultimo_anio", "sed_aereas", "motivos"]
-      : ["puesto", "subestacion", "alimentador", "direccion", "indice",
-         "riesgo_3_meses", "meses_sin_poda", "clientes", "saidi_alimentador_ultimo_anio",
-         "interrupciones_alimentador_ultimo_anio"];
+      ? ["Puesto", "Alimentador", "Índice de criticidad (0 a 100)",
+         "Probabilidad de corte por vegetación en 3 meses (%)", "Meses desde la última poda",
+         "Sin poda registrada", "Clientes de baja tensión", "SAIDI del último año (minutos)",
+         "Interrupciones del último año", "Subestaciones aéreas", "Razones"]
+      : ["Puesto", "Subestación", "Alimentador", "Dirección", "Índice de criticidad (0 a 100)",
+         "Probabilidad de corte por vegetación en 3 meses (%)", "Meses desde la última poda",
+         "Clientes de baja tensión", "SAIDI del alimentador, último año (minutos)",
+         "Interrupciones del alimentador, último año"];
     const filas = sel.map((d) => estado.nivel === "alimentadores"
-      ? [d.puesto, d.id, d.indice, d.probabilidad, d.meses_sin_poda,
-         d.sin_registro_poda ? "si" : "no", d.clientes,
+      ? [d.puesto, d.id, d.indice, porcentaje(d.probabilidad), d.meses_sin_poda,
+         d.sin_registro_poda ? "sí" : "no", d.clientes,
          d.saidi_ltm, d.interrupciones_12m, d.sed_aereas, (d.motivos || []).join(" | ")]
-      : [d.puesto, d.id, d.alimentador, d.direccion, d.indice, d.probabilidad,
+      : [d.puesto, d.id, d.alimentador, d.direccion, d.indice, porcentaje(d.probabilidad),
          d.meses_sin_poda, d.clientes, d.saidi_ltm, d.interrupciones_12m]);
     const escapar = (v) => {
       const s = String(v === null || v === undefined ? "" : v);
@@ -1262,11 +1293,74 @@
     const url = URL.createObjectURL(new Blob([texto], { type: "text/csv;charset=utf-8" }));
     const enlace = document.createElement("a");
     enlace.href = url;
-    enlace.download = `plan_poda_${estado.nivel}_${META.corte}.csv`;
+    enlace.download = `plan_poda_${estado.nivel}_${(META.fecha_datos || META.corte).replace(/-/g, "")}.csv`;
     document.body.appendChild(enlace);
     enlace.click();
     document.body.removeChild(enlace);
     URL.revokeObjectURL(url);
+  }
+
+  /* --------------------------------------------------- comparación de modelos */
+
+  const otroModelo = () => MODELOS[estado.modelo === 1 ? 2 : 1];
+  const nombreModelo = (n) => (n === 1 ? "modelo vigente (regresión logística)" : "modelo de contraste (XGBoost)");
+
+  // Puesto de una unidad con el otro modelo, para leer cuánto se movió.
+  function puestoOtro(u) {
+    const otro = otroModelo();
+    if (!otro) return null;
+    const lista = estado.nivel === "alimentadores" ? otro.alimentadores : otro.subestaciones;
+    const hallado = lista.find((d) => d.id === u.id);
+    return hallado ? hallado.puesto : null;
+  }
+
+  // Correlación de orden entre los dos rankings y coincidencia del plan con el tamaño
+  // elegido. Responde la pregunta de fondo: si cambiamos de modelo, ¿cambia la decisión?
+  function dibujarComparacion() {
+    const barra = $("#comparacion-modelos");
+    const otro = otroModelo();
+    if (!otro) { barra.hidden = true; return; }
+    const propios = unidades();
+    const ajenos = estado.nivel === "alimentadores" ? otro.alimentadores : otro.subestaciones;
+    const puestoAjeno = new Map(ajenos.map((d) => [d.id, d.puesto]));
+    const pares = propios.filter((d) => puestoAjeno.has(d.id)).map((d) => [d.puesto, puestoAjeno.get(d.id)]);
+    const n = pares.length;
+    const rangos = (vals) => { const o = vals.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0]);
+      const r = new Array(vals.length); o.forEach(([, i], k) => { r[i] = k + 1; }); return r; };
+    const ra = rangos(pares.map((p) => p[0])), rb = rangos(pares.map((p) => p[1]));
+    const d2 = d3.sum(ra, (v, i) => (v - rb[i]) ** 2);
+    const rho = n > 1 ? 1 - (6 * d2) / (n * (n * n - 1)) : 1;
+    const k = estado.corte;
+    const planPropio = new Set(propios.slice(0, k).map((d) => d.id));
+    const planAjeno = new Set(ajenos.slice(0, k).map((d) => d.id));
+    const coinciden = [...planPropio].filter((id) => planAjeno.has(id)).length;
+    const entran = [...planPropio].filter((id) => !planAjeno.has(id));
+    const salen = [...planAjeno].filter((id) => !planPropio.has(id));
+    const lista = (ids) => ids.slice(0, 6).join(", ") + (ids.length > 6 ? ` y ${ids.length - 6} más` : "");
+    const etiqueta = etiquetaNivel(k !== 1);
+    let detalle = coinciden === k
+      ? `El plan es el mismo con los dos modelos.`
+      : `Con el ${nombreModelo(estado.modelo)} entran ${lista(entran)}; con el otro entrarían en su lugar ${lista(salen)}.`;
+    barra.hidden = false;
+    barra.innerHTML =
+      `<span class="cmp-titulo">${icono("i-medidor")}Viendo el ${nombreModelo(estado.modelo)}</span>` +
+      `<span class="cmp-dato"><b>${coinciden} de ${k}</b> ${etiqueta} del plan coinciden con el otro modelo</span>` +
+      `<span class="cmp-dato">Correlación de orden <b>${coma(rho, 2)}</b></span>` +
+      `<span class="cmp-detalle">${detalle}</span>`;
+  }
+
+  function cambiarModelo(n) {
+    if (!MODELOS[n] || n === estado.modelo) return;
+    estado.modelo = n;
+    DATOS = MODELOS[n];
+    META = DATOS.meta;
+    indexar();
+    d3.selectAll("#selector-modelo button")
+      .classed("activo", function () { return +this.dataset.modelo === n; })
+      .attr("aria-checked", function () { return String(+this.dataset.modelo === n); });
+    if (estado.fijado && !buscarUnidad(estado.fijado)) estado.fijado = unidades()[0].id;
+    ficha.hidden = true;
+    actualizar({ regeometrizar: true });
   }
 
   /* -------------------------------------------------------------- redibujado */
@@ -1276,11 +1370,13 @@
     if (regeometrizar) dibujarMapa();
     else pintarMapa();
     dibujarFiltros();
+    dibujarComparacion();
     dibujarLeyenda();
     dibujarLista();
     dibujarResumen();
     dibujarCurva();
     dibujarDetalle();
+    escribirPie();
   }
 
   function ajustarCorte() {
@@ -1290,11 +1386,25 @@
     if (estado.corte > total) estado.corte = total;
     control.value = estado.corte;
     $("#corte-valor").textContent = `${estado.corte} de ${total}`;
+    $("#corte-ayuda").textContent = textoCapacidad();
+  }
+
+  // De dónde sale el tamaño propuesto. La capacidad es la mediana mensual de subestaciones
+  // podadas en el último año completo del registro de poda.
+  function textoCapacidad() {
+    const anio = (String(META.capacidad_regla || "").match(/\d{4}/) || [""])[0];
+    const cap = META.capacidad_registro_poda || META.capacidad_mes;
+    const referencia = anio
+      ? `En un mes típico de ${anio} se podaron ${cap} subestaciones.`
+      : `Capacidad de referencia: ${cap} subestaciones al mes.`;
+    return estado.nivel === "alimentadores"
+      ? `Propuesta inicial: un tercio de los ${DATOS.alimentadores.length} alimentadores. ${referencia}`
+      : `Propuesta inicial: la capacidad de poda. ${referencia}`;
   }
 
   /* ------------------------------------------------------------------ eventos */
 
-  d3.selectAll(".segmentado button").on("click", function () {
+  d3.selectAll("#nivel-piloto button").on("click", function () {
     const nivel = this.dataset.nivel;
     if (nivel === estado.nivel) return;
     estado.nivel = nivel;
@@ -1302,7 +1412,7 @@
     limpiarFiltros();
     estado.fijado = (nivel === "alimentadores" ? DATOS.alimentadores : DATOS.subestaciones)[0].id;
     ficha.hidden = true;
-    d3.selectAll(".segmentado button")
+    d3.selectAll("#nivel-piloto button")
       .classed("activo", function () { return this.dataset.nivel === nivel; })
       .attr("aria-checked", function () { return String(this.dataset.nivel === nivel); });
     estado.corte = nivel === "alimentadores"
@@ -1390,18 +1500,24 @@
   $("#ventana").textContent = META.ventana;
   document.querySelectorAll(".periodo-inicio").forEach((e) => { e.textContent = INICIO_DATOS; });
   document.querySelectorAll(".periodo-fin").forEach((e) => { e.textContent = FIN_DATOS; });
-  $("#sello-corte").querySelector("span").textContent = `Corte ${META.corte}`;
+  $("#sello-corte").querySelector("span").textContent = `Datos al ${fechaDatos()}`;
+  function escribirPie() {
   $("#pie-meta").textContent =
-    `Corte de datos ${META.corte}. Modelo: ${META.modelo}. ` +
+    `Datos al ${fechaDatos()}. Modelo: ${META.modelo}. ` +
     `${META.n_alimentadores} alimentadores, ${META.n_subestaciones} subestaciones aéreas y ` +
     `${META.n_no_expuestas} subestaciones no expuestas. Generado el ${META.generado}. ` +
     `La comparación cubre ${window.DATOS_DISTRITOS ? window.DATOS_DISTRITOS.orden.length : 0} distritos de Lima Norte.`;
+  }
+  escribirPie();
+
+  d3.selectAll("#selector-modelo button").on("click", function () { cambiarModelo(+this.dataset.modelo); });
+  if (!MODELOS[2]) $("#control-modelo").hidden = true;
 
   // La página abre con la unidad más crítica ya fijada, para que el panel de detalle
   // muestre desde el principio qué información entrega y no haya que descubrirlo.
   estado.fijado = unidades()[0] ? unidades()[0].id : null;
 
-  d3.selectAll(".segmentado button")
+  d3.selectAll("#nivel-piloto button")
     .classed("activo", function () { return this.dataset.nivel === estado.nivel; })
     .attr("aria-checked", function () { return String(this.dataset.nivel === estado.nivel); });
 
@@ -1410,11 +1526,13 @@
   construirEscala();
   dibujarMapa();
   dibujarFiltros();
+  dibujarComparacion();
   dibujarLeyenda();
   dibujarLista();
   dibujarResumen();
   dibujarCurva();
   dibujarDetalle();
 
+  if (parametros.get("modelo") === "2") cambiarModelo(2);
   if (parametros.get("vista") === "comparar") mostrarVista("comparar");
 })();

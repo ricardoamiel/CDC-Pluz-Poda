@@ -74,16 +74,24 @@
   <div class="controles" role="group" aria-label="Controles de la vista">
     <div class="control">
       <span class="control-etiqueta" id="etiqueta-nivel"><svg class="ico ico-et" aria-hidden="true"><use href="#i-capas"/></svg>Ver el índice por</span>
-      <div class="segmentado" role="radiogroup" aria-labelledby="etiqueta-nivel">
+      <div class="segmentado" id="nivel-piloto" role="radiogroup" aria-labelledby="etiqueta-nivel">
         <button type="button" role="radio" aria-checked="true" class="activo" data-nivel="alimentadores">Alimentador</button>
         <button type="button" role="radio" aria-checked="false" data-nivel="subestaciones">Subestación</button>
+      </div>
+    </div>
+
+    <div class="control" id="control-modelo">
+      <span class="control-etiqueta" id="etiqueta-modelo"><svg class="ico ico-et" aria-hidden="true"><use href="#i-medidor"/></svg>Modelo de riesgo</span>
+      <div class="segmentado" id="selector-modelo" role="radiogroup" aria-labelledby="etiqueta-modelo">
+        <button type="button" role="radio" aria-checked="true" class="activo" data-modelo="1" title="Modelo vigente: regresión logística. Es el que define el plan">Modelo 1 · Vigente</button>
+        <button type="button" role="radio" aria-checked="false" data-modelo="2" title="Modelo de contraste: XGBoost. Solo sirve para comprobar que el plan no cambia">Modelo 2 · Contraste</button>
       </div>
     </div>
 
     <div class="control control-ancho">
       <label class="control-etiqueta" for="corte"><svg class="ico ico-et" aria-hidden="true"><use href="#i-tijeras"/></svg>Tamaño del plan <span class="valor-control" id="corte-valor">10</span></label>
       <input type="range" id="corte" min="1" max="30" value="10" step="1" aria-describedby="corte-ayuda">
-      <span class="ayuda" id="corte-ayuda">Cuántas unidades entran al programa del trimestre</span>
+      <span class="ayuda" id="corte-ayuda">Cuántas unidades entran al programa</span>
     </div>
 
     <div class="control control-ancho control-buscar">
@@ -104,6 +112,9 @@
 
   <!-- Los filtros activos se muestran aquí y no dentro de cada gráfico: valen para todas
        las vistas a la vez, así que tienen que verse y quitarse en un solo sitio. -->
+  <!-- Cuánto cambia el ranking si se usa el otro modelo de riesgo. -->
+  <div class="comparacion-modelos" id="comparacion-modelos" role="status" aria-live="polite" hidden></div>
+
   <div class="filtros" id="filtros" role="status" aria-live="polite" hidden>
     <span class="filtros-titulo">Filtro activo</span>
     <div class="filtros-chips" id="filtros-chips"></div>
@@ -131,7 +142,7 @@
       <div class="tarjeta-icono ti-ambar"><svg class="ico" aria-hidden="true"><use href="#i-medidor"/></svg></div>
       <div class="tarjeta-cuerpo">
         <p class="tarjeta-valor" id="kpi-saidi">-</p>
-        <p class="tarjeta-etiqueta">SAIDI del último año en los alimentadores del plan</p>
+        <p class="tarjeta-etiqueta">Minutos de SAIDI del último año en los alimentadores del plan</p>
         <p class="tarjeta-pie" id="kpi-saidi-pie">-</p>
       </div>
     </div>
@@ -222,6 +233,7 @@
     </section>
 
     <div class="leyenda leyenda-cmp" id="leyenda-cmp"></div>
+    <p class="aviso-cmp"><svg class="ico" aria-hidden="true"><use href="#i-info"/></svg><span>El color compara dentro de cada distrito, no entre distritos. Para comparar los dos distritos use las cifras de arriba.</span></p>
     <div class="mapas-cmp">
       <section class="panel panel-mapa-cmp" aria-labelledby="titulo-mapa-a">
         <div class="panel-cabecera">
@@ -255,13 +267,14 @@
 <!-- D3 versión 7.9.0 servido desde el propio repositorio: la página no depende de una red
      externa y funciona igual en GitHub Pages, en un servidor local o sin conexión. -->
 <script src="js/vendor/d3.v7.9.0.min.js"></script>
-<script src="data/criticidad_los_olivos.js?v=202610150806"></script>
+<script src="data/criticidad_los_olivos.js?v=202610162257"></script>
+<script src="data/criticidad_los_olivos_alterno.js?v=202610162257"></script>
 <!-- Límite del distrito y avenidas principales, de OpenStreetMap (ODbL 1.0), ya
      simplificados y guardados en el repositorio: 14 kB y ninguna petición de red. -->
-<script src="data/geografia_los_olivos.js?v=202610150806"></script>
+<script src="data/geografia_los_olivos.js?v=202610162257"></script>
 <!-- Los ocho distritos de la comparación y sus límites, de OpenStreetMap (ODbL 1.0). -->
-<script src="data/distritos.js?v=202610150806"></script>
-<script src="data/geografia_distritos.js?v=202610150806"></script>
+<script src="data/distritos.js?v=202610162257"></script>
+<script src="data/geografia_distritos.js?v=202610162257"></script>
 <script src="js/comparar.js?v=20261005"></script>
 <script src="js/app.js?v=20261005"></script>
 </body>

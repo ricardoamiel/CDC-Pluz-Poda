@@ -441,6 +441,9 @@ def registrar_mlflow(resultados, reporte):
     if mlflow.get_experiment_by_name(nombre) is None:
         mlflow.create_experiment(nombre, artifact_location=(config.SALIDAS / "mlruns").as_uri())
     mlflow.set_experiment(nombre)
+    # Sin esta etiqueta, MLflow 3 no sabe que es un experimento de entrenamiento de modelos y
+    # abre su vista de aplicaciones generativas en lugar de la tabla de corridas.
+    mlflow.set_experiment_tag("mlflow.experimentKind", "custom_model_development")
     with mlflow.start_run(run_name=f"benchmark {resultados['fecha']}"):
         mlflow.log_params({"corte": resultados["corte"], "variables": ", ".join(config.VARIABLES),
                            "prueba": " a ".join(resultados["particion"]["prueba"])})
