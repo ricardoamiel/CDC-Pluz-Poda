@@ -201,7 +201,7 @@ def corrida(publicar=True, forzar=False, reentrenar=False):
     paso("4. Índice de criticidad por distrito")
     periodo_datos = [indice.nombre_mes(tablas["fallas"]["periodo"].min()),
                      indice.nombre_mes(corte)]
-    distritos, _ = indice.construir_distritos(tablas, operativo, modelo_final, corte,
+    distritos, postes = indice.construir_distritos(tablas, operativo, modelo_final, corte,
                                               periodo_datos)
     for d in distritos.values():
         mt = d["meta"]
@@ -237,6 +237,8 @@ def corrida(publicar=True, forzar=False, reentrenar=False):
         for nombre, kb in indice.publicar(distritos).items():
             print(f"    {nombre}: {kb} kB")
         for nombre, kb in indice.publicar_alterno(distritos_alt).items():
+            print(f"    {nombre}: {kb} kB")
+        for nombre, kb in indice.publicar_postes(postes).items():
             print(f"    {nombre}: {kb} kB")
 
     paso("5. Salidas para la operación")
@@ -285,7 +287,9 @@ def benchmark():
     operativo = operativo.join(expo, on="alimentador")
 
     paso("Entrenando y evaluando los modelos")
-    resultados = bm.ejecutar(panel, inicio, corte, operativo)
+    from etapas import indice
+    piloto = indice.alimentadores_por_distrito(guia)[config.PILOTO]
+    resultados = bm.ejecutar(panel, inicio, corte, operativo, piloto)
     carpeta = config.SALIDAS / "benchmark"
     carpeta.mkdir(parents=True, exist_ok=True)
     reporte = reporte_benchmark.escribir(resultados, carpeta / "benchmark_modelos.html")

@@ -181,10 +181,20 @@ def cargar_todo():
     faltantes = [d for d in config.DISTRITOS if d not in set(guia["DISTRITO"])]
     if faltantes:
         raise ErrorDeLote(f"La guía de subestaciones no trae los distritos {faltantes}")
+    postes = t["postes_mt"]
+    if postes is not None:
+        postes = pd.DataFrame({
+            "poste": postes["CÓDIGO DE POSTE"].astype(str).str.strip(),
+            "lon": pd.to_numeric(postes["STRUCTURE NODE LONGITUD\nX"], errors="coerce"),
+            "lat": pd.to_numeric(postes["STRUCTURE NODE LATITUD\nY"], errors="coerce"),
+            "DISTRITO": postes["DISTRITO"].astype(str).str.strip().map(_normalizar).str.upper(),
+        }).dropna(subset=["lon", "lat"])
+        postes = postes[postes["poste"] != "nan"].drop_duplicates("poste")
     registro["avisos"] = avisos
     registro["periodo_interrupciones"] = [str(fallas["Inicio"].min().date()),
                                           str(fallas["Inicio"].max().date())]
     registro["periodo_poda"] = [str(poda["FECHA"].min().date()),
                                 str(poda["FECHA"].max().date())]
 
-    return {"fallas": fallas, "poda": poda, "saidi_ltm": saidi_ltm, "guia": guia}, registro
+    return {"fallas": fallas, "poda": poda, "saidi_ltm": saidi_ltm, "guia": guia,
+            "postes": postes}, registro

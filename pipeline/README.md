@@ -67,6 +67,7 @@ Cada fuente se reconoce por el nombre del archivo, sin distinguir mayúsculas ni
 * **Ranking de SAIDI.** Un archivo cuyo nombre contenga «ranking» y «saidi», con la hoja Evolutivo SAIDI y las columnas Alimentador y SAIDI LTM. Modo foto.
 * **Guía de subestaciones.** Un archivo cuyo nombre empiece por «guia» o «guía», con las columnas SED, ALIM, KVA, Clientes BT Cantidad Referencial, DIRECCION, DISTRITO, TIPO DE CONSTRUCCIÓN y las dos coordenadas. Modo foto. La fila de títulos se busca sola, porque cambió entre la versión de agosto y la de setiembre.
 * **Diccionario de causas.** Opcional. Si llega, se usa para avisar cuando aparece una causa que no está definida. Modo foto.
+* **Postes de media tensión.** Opcional. Código, coordenadas y distrito de cada poste. Como no trae alimentador ni subestación, cada poste se asigna a la subestación aérea más cercana dentro de 400 m y se publica en data/postes_mt.js para ubicarse en el mapa. No entra al modelo: se probó el número de postes por alimentador y la mejora de la PR AUC no se distingue del azar, baja la exhaustividad con 270 alertas por mes y repite la exposición por clientes y potencia que ya está en el índice. Modo foto.
 
 **Modo histórico.** Se juntan todos los lotes. El lote más reciente manda sobre el periodo que cubre, y los anteriores solo aportan lo que es más antiguo. Así funciona igual si Pluz envía cada semana el histórico completo o solo la semana nueva, sin duplicar eventos. Se comprobó con un lote simulado que solo traía agosto: el total se mantuvo en 6.423 interrupciones.
 
@@ -180,3 +181,12 @@ Las tablas que se reemplazan en cada corrida son interrupciones, poda, guia_sed,
 * La poda de Norte Chico que llegó en setiembre tiene otro formato, por SET y circuito y sin alimentador, y todavía no entra. Por eso Norte Chico no está en la comparación.
 * No hay un dato de cuánta vegetación tiene cada distrito. La comparación lo aproxima con los cortes por vegetación por cada 100 subestaciones aéreas.
 * El modelo sigue en paridad con la regla por historial. Lo que aporta es una probabilidad calibrada que el índice puede sumar. Bajar de alimentador a tramo exige el maestro de estructuras.
+
+
+## Cifras por distrito sin doble conteo
+
+Un alimentador puede llegar a varios distritos. En el panel de cifras de la comparación, cada alimentador aporta a un distrito la parte que corresponde a sus subestaciones en él, de modo que la suma de los distritos no cuenta dos veces el mismo evento. Los mantenimientos por vegetación del último año se cuentan con el código de subestación que trae el circuito del registro de poda (84 % de los registros); los que no lo traen se reparten con la misma cuota del alimentador.
+
+## Dónde acierta y dónde se equivoca
+
+La orden benchmark agrega al reporte una sección con la precisión de las alertas según el historial de vegetación del alimentador, el perfil de los cortes no previstos y una tabla por alimentador, con los de Los Olivos resaltados. Con los datos de agosto de 2026, la precisión va de 9 % en alimentadores sin ningún evento de vegetación a 56 % en los que acumulan más de diez, y el 85 % de los cortes no previstos ocurrió en alimentadores sin vegetación en el año anterior. La misma sección resume la literatura que respalda el método; el detalle está en papers/README.md.

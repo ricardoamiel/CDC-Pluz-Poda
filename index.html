@@ -98,7 +98,7 @@
       <label class="control-etiqueta" for="buscar"><svg class="ico ico-et" aria-hidden="true"><use href="#i-buscar"/></svg>Buscar</label>
       <div class="campo-buscar">
         <svg class="ico ico-campo" aria-hidden="true"><use href="#i-buscar"/></svg>
-        <input type="search" id="buscar" placeholder="Código o dirección" autocomplete="off">
+        <input type="search" id="buscar" placeholder="Subestación, alimentador, dirección o poste" autocomplete="off">
       </div>
     </div>
 
@@ -134,7 +134,7 @@
       <div class="tarjeta-icono ti-verde"><svg class="ico" aria-hidden="true"><use href="#i-clientes"/></svg></div>
       <div class="tarjeta-cuerpo">
         <p class="tarjeta-valor" id="kpi-clientes">-</p>
-        <p class="tarjeta-etiqueta">Clientes de baja tensión cubiertos</p>
+        <p class="tarjeta-etiqueta" id="kpi-clientes-et">Clientes de baja tensión cubiertos</p>
         <p class="tarjeta-pie" id="kpi-clientes-pie">-</p>
       </div>
     </div>
@@ -142,7 +142,7 @@
       <div class="tarjeta-icono ti-ambar"><svg class="ico" aria-hidden="true"><use href="#i-medidor"/></svg></div>
       <div class="tarjeta-cuerpo">
         <p class="tarjeta-valor" id="kpi-saidi">-</p>
-        <p class="tarjeta-etiqueta">Minutos de SAIDI del último año en los alimentadores del plan</p>
+        <p class="tarjeta-etiqueta" id="kpi-saidi-et">Minutos de SAIDI del último año de los alimentadores del plan</p>
         <p class="tarjeta-pie" id="kpi-saidi-pie">-</p>
       </div>
     </div>
@@ -150,7 +150,7 @@
       <div class="tarjeta-icono ti-gris"><svg class="ico" aria-hidden="true"><use href="#i-alerta"/></svg></div>
       <div class="tarjeta-cuerpo">
         <p class="tarjeta-valor" id="kpi-interrupciones">-</p>
-        <p class="tarjeta-etiqueta">Interrupciones del último año en los alimentadores del plan</p>
+        <p class="tarjeta-etiqueta" id="kpi-veg-et">Interrupciones por vegetación y no ubicadas del último año de los alimentadores del plan</p>
         <p class="tarjeta-pie" id="kpi-interrupciones-pie">-</p>
       </div>
     </div>
@@ -160,11 +160,22 @@
     <section class="panel panel-mapa" aria-labelledby="titulo-mapa">
       <div class="panel-cabecera">
         <h2 id="titulo-mapa"><svg class="ico ico-h" aria-hidden="true"><use href="#i-mapa"/></svg>Mapa de criticidad del distrito</h2>
-        <p class="panel-nota">Cada celda es el área de influencia de una subestación aérea sobre el límite real del distrito. El color es el índice de la unidad elegida y el contorno azul marca lo que entra al plan.</p>
+        <p class="panel-nota">Cada celda es el área de influencia de una subestación aérea sobre el límite real del distrito. El color es el índice de la unidad elegida y el contorno azul marca lo que entra al plan. Acerque con los botones, con Ctrl y la rueda o con dos dedos: al acercar aparecen los postes de media tensión.</p>
       </div>
       <div class="mapa-caja" id="mapa-caja">
         <svg id="mapa" role="img" aria-labelledby="titulo-mapa desc-mapa"><desc id="desc-mapa">Mapa del distrito de Los Olivos dividido en celdas coloreadas según el índice de criticidad. La tabla que acompaña al mapa contiene los mismos datos en forma de lista ordenada.</desc></svg>
         <div class="ficha" id="ficha" role="tooltip" aria-live="polite" hidden></div>
+        <div class="segmentado mapa-fondo" id="mapa-fondo" role="radiogroup" aria-label="Fondo del mapa">
+          <button type="button" role="radio" aria-checked="true" class="activo" data-fondo="coropletico">Coroplético</button>
+          <button type="button" role="radio" aria-checked="false" data-fondo="satelital">Satelital</button>
+        </div>
+        <p class="mapa-atribucion" id="mapa-atribucion" hidden></p>
+        <div class="mapa-botones" role="group" aria-label="Acercamiento del mapa">
+          <button type="button" class="boton-icono" id="mapa-acercar" aria-label="Acercar" title="Acercar">+</button>
+          <button type="button" class="boton-icono" id="mapa-alejar" aria-label="Alejar" title="Alejar">&minus;</button>
+          <button type="button" class="boton-icono" id="mapa-todo" aria-label="Ver el distrito entero" title="Ver el distrito entero"><svg class="ico" aria-hidden="true"><use href="#i-mapa"/></svg></button>
+          <span class="mapa-escala" id="mapa-escala" aria-live="polite"></span>
+        </div>
       </div>
       <div class="leyenda" id="leyenda"></div>
     </section>
@@ -186,25 +197,25 @@
     </section>
   </main>
 
-  <!-- La curva responde la pregunta que abre siempre la discusión de capacidad: cuánto se
-       gana al estirar el plan una unidad más. Dos paneles apilados sobre el mismo eje de
-       puesto, nunca dos escalas verticales en un mismo marco. -->
-  <section class="panel panel-curva" aria-labelledby="titulo-curva">
-    <div class="panel-cabecera">
-      <h2 id="titulo-curva"><svg class="ico ico-h" aria-hidden="true"><use href="#i-curva"/></svg>Cuánto rinde estirar el plan</h2>
-      <p class="panel-nota" id="curva-nota">Índice y cobertura acumulada de clientes según hasta qué puesto llega el programa. Arrastre el asa azul para cambiar el tamaño del plan, o haga clic en una barra para fijar esa unidad.</p>
-    </div>
-    <div class="curva-caja" id="curva-caja">
-      <svg id="curva" role="img" aria-labelledby="titulo-curva desc-curva"><desc id="desc-curva">Dos gráficos apilados sobre el mismo eje de puesto: arriba el índice de criticidad de cada unidad, abajo el porcentaje acumulado de clientes de baja tensión cubiertos. Una banda marca hasta dónde llega el plan.</desc></svg>
-    </div>
-  </section>
-
   <section class="panel panel-detalle" aria-labelledby="titulo-detalle">
     <div class="panel-cabecera">
       <h2 id="titulo-detalle"><svg class="ico ico-h" aria-hidden="true"><use href="#i-pin"/></svg>Detalle de la unidad seleccionada</h2>
       <p class="panel-nota">Pase el puntero sobre el mapa o la lista, o toque una celda, para fijar una unidad aquí.</p>
     </div>
     <div class="detalle" id="detalle"></div>
+  </section>
+
+  <!-- La curva responde la pregunta que abre siempre la discusión de capacidad: cuánto se
+       gana al estirar el plan una unidad más. Dos paneles apilados sobre el mismo eje de
+       puesto, nunca dos escalas verticales en un mismo marco. -->
+  <section class="panel panel-curva" aria-labelledby="titulo-curva">
+    <div class="panel-cabecera">
+      <h2 id="titulo-curva"><svg class="ico ico-h" aria-hidden="true"><use href="#i-curva"/></svg>Escenario de ampliación del plan</h2>
+      <p class="panel-nota" id="curva-nota">Índice y cobertura acumulada de clientes según hasta qué puesto llega el programa. Arrastre el asa azul para cambiar el tamaño del plan. Haga clic en una barra para buscar esa unidad y verla en el mapa; otro clic la suelta.</p>
+    </div>
+    <div class="curva-caja" id="curva-caja">
+      <svg id="curva" role="img" aria-labelledby="titulo-curva desc-curva"><desc id="desc-curva">Dos gráficos apilados sobre el mismo eje de puesto: arriba el índice de criticidad de cada unidad, abajo el porcentaje acumulado de clientes de baja tensión cubiertos. Una banda marca hasta dónde llega el plan.</desc></svg>
+    </div>
   </section>
   </div>
 
@@ -221,13 +232,21 @@
           <button type="button" role="radio" aria-checked="false" data-nivel="subestaciones">Subestación</button>
         </div>
       </div>
+      <div class="control">
+        <span class="control-etiqueta" id="etiqueta-fondo-cmp"><svg class="ico ico-et" aria-hidden="true"><use href="#i-mapa"/></svg>Fondo de los mapas</span>
+        <div class="segmentado" id="fondo-cmp" role="radiogroup" aria-labelledby="etiqueta-fondo-cmp">
+          <button type="button" role="radio" aria-checked="true" class="activo" data-fondo="coropletico">Coroplético</button>
+          <button type="button" role="radio" aria-checked="false" data-fondo="satelital">Satelital</button>
+        </div>
+      </div>
       <p class="ayuda ayuda-cmp">Mismo modelo, mismos cuatro componentes y mismos pesos que el piloto. El índice se calcula dentro de cada distrito: 100 es la unidad más crítica de ese distrito, así que el color compara posiciones, no riesgos absolutos. Para eso están las cifras de abajo.</p>
     </div>
 
     <section class="panel panel-cifras" aria-labelledby="titulo-cifras">
       <div class="panel-cabecera">
         <h2 id="titulo-cifras"><svg class="ico ico-h" aria-hidden="true"><use href="#i-medidor"/></svg>Los dos distritos en cifras</h2>
-        <p class="panel-nota">Datos de <span class="periodo-inicio">-</span> a <span class="periodo-fin">-</span>. Un alimentador que llega a varios distritos se cuenta en cada uno.</p>
+        <p class="panel-nota">Datos de <span class="periodo-inicio">-</span> a <span class="periodo-fin">-</span>.</p>
+        <p class="cifras-leyenda" id="cifras-leyenda"></p>
       </div>
       <div class="cifras" id="cifras"></div>
     </section>
@@ -240,7 +259,8 @@
           <h2 id="titulo-mapa-a"><svg class="ico ico-h" aria-hidden="true"><use href="#i-pin"/></svg><span>Los Olivos</span><span class="etiqueta-piloto">piloto</span></h2>
           <p class="panel-nota" id="nota-mapa-a">-</p>
         </div>
-        <div class="mapa-caja" id="caja-mapa-a"><svg class="mapa-cmp" id="mapa-a" role="img" aria-label="Mapa del índice de criticidad de Los Olivos"></svg><div class="ficha" id="ficha-a" role="tooltip" hidden></div></div>
+        <div class="mapa-caja" id="caja-mapa-a"><svg class="mapa-cmp" id="mapa-a" role="img" aria-label="Mapa del índice de criticidad de Los Olivos"></svg><div class="ficha" id="ficha-a" role="tooltip" hidden></div><p class="mapa-atribucion" id="atribucion-a" hidden></p></div>
+        <div class="elegida-cmp" id="elegida-a" role="status" aria-live="polite" hidden></div>
         <div class="top-cmp" id="top-a"></div>
       </section>
       <section class="panel panel-mapa-cmp" aria-labelledby="titulo-mapa-b">
@@ -248,7 +268,8 @@
           <h2 id="titulo-mapa-b"><svg class="ico ico-h" aria-hidden="true"><use href="#i-mapa"/></svg><span id="nombre-b">-</span></h2>
           <p class="panel-nota" id="nota-mapa-b">-</p>
         </div>
-        <div class="mapa-caja" id="caja-mapa-b"><svg class="mapa-cmp" id="mapa-b" role="img" aria-label="Mapa del índice de criticidad del distrito elegido"></svg><div class="ficha" id="ficha-b" role="tooltip" hidden></div></div>
+        <div class="mapa-caja" id="caja-mapa-b"><svg class="mapa-cmp" id="mapa-b" role="img" aria-label="Mapa del índice de criticidad del distrito elegido"></svg><div class="ficha" id="ficha-b" role="tooltip" hidden></div><p class="mapa-atribucion" id="atribucion-b" hidden></p></div>
+        <div class="elegida-cmp" id="elegida-b" role="status" aria-live="polite" hidden></div>
         <div class="top-cmp" id="top-b"></div>
       </section>
     </div>
@@ -267,15 +288,17 @@
 <!-- D3 versión 7.9.0 servido desde el propio repositorio: la página no depende de una red
      externa y funciona igual en GitHub Pages, en un servidor local o sin conexión. -->
 <script src="js/vendor/d3.v7.9.0.min.js"></script>
-<script src="data/criticidad_los_olivos.js?v=202610162257"></script>
-<script src="data/criticidad_los_olivos_alterno.js?v=202610162257"></script>
+<script src="data/criticidad_los_olivos.js?v=202610192158"></script>
+<script src="data/criticidad_los_olivos_alterno.js?v=202610192158"></script>
 <!-- Límite del distrito y avenidas principales, de OpenStreetMap (ODbL 1.0), ya
      simplificados y guardados en el repositorio: 14 kB y ninguna petición de red. -->
-<script src="data/geografia_los_olivos.js?v=202610162257"></script>
+<script src="data/geografia_los_olivos.js?v=202610192158"></script>
 <!-- Los ocho distritos de la comparación y sus límites, de OpenStreetMap (ODbL 1.0). -->
-<script src="data/distritos.js?v=202610162257"></script>
-<script src="data/geografia_distritos.js?v=202610162257"></script>
-<script src="js/comparar.js?v=20261005"></script>
-<script src="js/app.js?v=20261005"></script>
+<script src="data/distritos.js?v=202610192158"></script>
+<script src="data/postes_mt.js?v=202610192158"></script>
+<script src="data/geografia_distritos.js?v=202610192158"></script>
+<script src="js/teselas.js?v=20261019"></script>
+<script src="js/comparar.js?v=20261021"></script>
+<script src="js/app.js?v=20261022"></script>
 </body>
 </html>

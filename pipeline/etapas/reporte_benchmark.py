@@ -116,6 +116,7 @@ tr.tFN td:nth-child(2){color:#b3261e}tr.tFP td:nth-child(2){color:#ac5700}tr.tVP
 .selector button.activo{background:#395aa1;color:#fff;border-color:#395aa1}
 .ayuda{position:fixed;pointer-events:none;background:#fff;border:1px solid #c2cee2;border-radius:8px;padding:7px 10px;font-size:12px;box-shadow:0 6px 18px rgba(19,26,38,.14);display:none;z-index:10}
 .nota{color:#4e5a6e;font-size:12.5px}
+tr.piloto td{background:#fff8e1}.literatura{padding-left:18px;font-size:13px;line-height:1.5}.literatura li{margin-bottom:6px}.literatura a{color:#395aa1}#g-errores .grafico{max-width:680px}.tabla-alta{max-height:420px;overflow-y:auto}
 th.ordenable{cursor:pointer;user-select:none}th.ordenable:hover{background:#e8eef8}
 th .flecha{color:#9db1d6;margin-left:4px;font-size:10px}th.asc .flecha,th.desc .flecha{color:#395aa1}
 """
@@ -283,6 +284,26 @@ nombres.forEach(n => {
     .attr("fill", d => d.aporte_cobertura_40.li > 0 ? "#395aa1" : "#76839a");
 })();
 
+// Precisión de las alertas según el historial de vegetación del alimentador.
+(function () {
+  if (!R.errores) return;
+  const datos = R.errores.por_historial, W = 640, H = 260, m = {a: 20, d: 20, b: 52, i: 56};
+  const svg = d3.select("#g-errores").append("div").attr("class", "grafico").append("svg").attr("viewBox", `0 0 ${W} ${H}`);
+  const x = d3.scaleBand(datos.map(d => d.tramo), [m.i, W - m.d]).padding(0.28);
+  const y = d3.scaleLinear([0, Math.max(0.65, d3.max(datos, d => d.precision) * 1.15)], [H - m.b, m.a]);
+  svg.append("g").attr("class", "eje").attr("transform", `translate(0,${H - m.b})`).call(d3.axisBottom(x));
+  svg.append("g").attr("class", "eje").attr("transform", `translate(${m.i},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(v => Math.round(100 * v) + " %"));
+  svg.append("text").attr("class", "titulo-eje").attr("x", (m.i + W - m.d) / 2).attr("y", H - 12).attr("text-anchor", "middle").text("Eventos de vegetación acumulados por el alimentador desde 2024");
+  svg.selectAll("rect.b").data(datos).join("rect").attr("class", "b").attr("x", d => x(d.tramo)).attr("width", x.bandwidth())
+    .attr("y", d => y(d.precision)).attr("height", d => y(0) - y(d.precision)).attr("fill", C[R.decision.modelo] || "#395aa1")
+    .on("mousemove", (e, d) => mostrar(e, `<b>${d.tramo}</b><br>${d.alertas} alertas, ${d.aciertos} con corte<br>Precisión ${pct(d.precision)}`)).on("mouseleave", ocultar);
+  svg.selectAll("text.v").data(datos).join("text").attr("class", "titulo-eje").attr("x", d => x(d.tramo) + x.bandwidth() / 2)
+    .attr("y", d => y(d.precision) - 6).attr("text-anchor", "middle").attr("font-weight", 700).text(d => Math.round(100 * d.precision) + " %");
+  const base = R.errores.tasa_base;
+  svg.append("line").attr("x1", m.i).attr("x2", W - m.d).attr("y1", y(base)).attr("y2", y(base)).attr("stroke", "#b3261e").attr("stroke-dasharray", "5 3");
+  svg.append("text").attr("class", "titulo-eje").attr("x", m.i + 6).attr("y", y(base) - 5).attr("fill", "#b3261e").text("al azar: " + Math.round(100 * base) + " %");
+})();
+
 const PO = R.punto_operacion;
 lineas("#g-f2", [{nombre: "Regresión logística, validación interna", color: C["Regresión logística"], grueso: true,
   puntos: PO.rejilla.map((k, i) => [k, PO.f2_validacion[i]])}],
@@ -327,37 +348,66 @@ d3.selectAll("table").each(function () {
 
 d3.selectAll("#filtro-ejemplos button").on("click", function () {
   const m = this.dataset.modelo;
-  // Ordenar cualquier tabla al hacer clic en su encabezado. Lee cifras con coma decimal, por
-// ciento y diferencias escritas como «más» o «menos»; el resto se ordena como texto.
-function valorCelda(t) {
-  t = t.trim();
-  const signo = t.startsWith("menos") ? -1 : 1;
-  const num = t.replace(/^(más|menos)\s*/, "").match(/^[0-9.]*,?[0-9]+/);
-  if (num) return signo * parseFloat(num[0].replace(/\.(?=\d{3})/g, "").replace(",", "."));
-  return t.toLowerCase();
-}
-d3.selectAll("table").each(function () {
-  const tabla = d3.select(this);
-  tabla.selectAll("thead th").classed("ordenable", true).attr("title", "Ordenar por esta columna")
-    .each(function () { d3.select(this).append("span").attr("class", "flecha").text("⇅"); })
-    .on("click", function () {
-      const th = d3.select(this), col = Array.from(this.parentNode.children).indexOf(this);
-      const asc = !th.classed("asc");
-      tabla.selectAll("thead th").classed("asc", false).classed("desc", false).select(".flecha").text("⇅");
-      th.classed(asc ? "asc" : "desc", true).select(".flecha").text(asc ? "▲" : "▼");
-      const filas = tabla.select("tbody").selectAll("tr").nodes();
-      filas.sort((a, b) => {
-        const x = valorCelda(a.children[col].textContent), y = valorCelda(b.children[col].textContent);
-        const r = (typeof x === "number" && typeof y === "number") ? x - y : String(x).localeCompare(String(y), "es");
-        return asc ? r : -r;
-      }).forEach(f => f.parentNode.appendChild(f));
-    });
-});
-
-d3.selectAll("#filtro-ejemplos button").classed("activo", function () { return this.dataset.modelo === m; });
+  d3.selectAll("#filtro-ejemplos button").classed("activo", function () { return this.dataset.modelo === m; });
   d3.selectAll("#ejemplos tbody tr").style("display", function () { return !m || this.dataset.modelo === m ? null : "none"; });
 });
 """
+
+
+def tabla_errores(r):
+    e = r["errores"]
+    filas = "".join(
+        f"<tr{' class=piloto' if a['piloto'] else ''}><td>{a['alimentador']}{' (Los Olivos)' if a['piloto'] else ''}</td>"
+        f"<td>{a['alertas']}</td><td>{a['aciertos']}</td><td>{a['falsas']}</td><td>{a['no_previstos']}</td>"
+        f"<td>{int(a['veg_hist'])}</td><td>{int(a['veg_12m'])}</td><td>{int(a['eventos_12m'])}</td></tr>"
+        for a in e["alimentadores"])
+    return ("<table id='errores'><thead><tr><th>Alimentador</th><th>Meses con alerta</th><th>Aciertos</th>"
+            "<th>Falsas alarmas</th><th>Cortes no previstos</th><th>Vegetación desde 2024</th>"
+            "<th>Vegetación 12 meses</th><th>Interrupciones 12 meses</th></tr></thead><tbody>"
+            + filas + "</tbody></table>")
+
+
+LITERATURA = [
+    ("Predecir por alimentador y por mes con el historial de cortes",
+     "Doostan, Sohrabi y Chowdhury (2019) predicen los cortes mensuales por vegetación con el historial de la distribuidora; Melagoda y otros (2021) estiman la probabilidad de corte en un horizonte fijo y la llevan a un mapa de riesgo de alimentadores.",
+     [("Doostan y otros, 2019", "https://arxiv.org/abs/1807.06180"),
+      ("Melagoda y otros, 2021", "https://dl.lib.uom.lk/items/5726ff57-0d23-4d0d-a98b-2abd153526b6")]),
+    ("Reloj de poda en el índice",
+     "Guikema, Davidson y Liu (2006) y Pan (2021) encuentran con datos de distribuidoras que el efecto de la poda sobre los cortes es significativo y depende del tiempo transcurrido.",
+     [("Guikema y otros, 2006", "https://doi.org/10.1109/TPWRD.2005.860238"),
+      ("Pan, 2021", "https://doi.org/10.3389/fams.2021.769355")]),
+    ("Índice como probabilidad por consecuencia, con capacidad fija",
+     "Dokic y Kezunovic (2019) definen el riesgo de cada tramo como probabilidad por vulnerabilidad y programan la poda que minimiza el riesgo con un presupuesto dado; Correa Tamayo y otros (2019) modelan la poda con la capacidad de las cuadrillas como restricción.",
+     [("Dokic y Kezunovic, 2019", "https://doi.org/10.1109/TSG.2018.2868457"),
+      ("Correa Tamayo y otros, 2019", "https://doi.org/10.22430/22565337.1173")]),
+    ("Percentil dentro del distrito y sensibilidad del ranking",
+     "El manual de indicadores compuestos de la OCDE y el Centro Común de Investigación presenta la normalización por posición como robusta a valores extremos y recomienda medir la sensibilidad del ranking a las decisiones del método, como la comparación entre el modelo vigente y el de contraste.",
+     [("OCDE y JRC, 2008", "https://knowledge4policy.ec.europa.eu/sites/default/files/jrc47008_handbook_final.pdf")]),
+    ("PR AUC como métrica que decide",
+     "Saito y Rehmsmeier (2015) muestran que con clases desbalanceadas la curva de precisión y exhaustividad informa mejor que la curva ROC.",
+     [("Saito y Rehmsmeier, 2015", "https://doi.org/10.1371/journal.pone.0118432")]),
+    ("Validación temporal",
+     "Cerqueira, Torgo y Mozetič (2020) encuentran que con series no estacionarias la validación fuera de muestra que respeta el tiempo es la más confiable.",
+     [("Cerqueira y otros, 2020", "https://arxiv.org/abs/1905.11744")]),
+    ("Probabilidades calibradas",
+     "Niculescu Mizil y Caruana (2005) comparan la calibración de distintos algoritmos y la corrigen sin cambiar el orden, como la recalibración del modelo vigente.",
+     [("Niculescu Mizil y Caruana, 2005", "https://doi.org/10.1145/1102351.1102430")]),
+    ("Modelos comparados",
+     "Random Forest (Breiman, 2001), XGBoost (Chen y Guestrin, 2016), LightGBM (Ke y otros, 2017) y máquinas de vectores de soporte (Cortes y Vapnik, 1995).",
+     [("Breiman, 2001", "https://doi.org/10.1023/A:1010933404324"),
+      ("Chen y Guestrin, 2016", "https://arxiv.org/abs/1603.02754"),
+      ("Ke y otros, 2017", "https://proceedings.neurips.cc/paper/2017/file/6449f44a102fde848669bdd9eb6b76fa-Paper.pdf")]),
+]
+
+
+def seccion_literatura():
+    filas = "".join(
+        f"<li><b>{html.escape(t)}.</b> {html.escape(d)} "
+        + " · ".join(f"<a href='{u}' target='_blank' rel='noopener'>{html.escape(n)}</a>" for n, u in enlaces)
+        + "</li>" for t, d, enlaces in LITERATURA)
+    return ("<section><h2>Literatura que respalda el método</h2>"
+            "<p class='nota'>Resumen de las fuentes de cada decisión. La lista completa, con qué tomamos de cada una, está en la carpeta papers del repositorio.</p>"
+            f"<ul class='literatura'>{filas}</ul></section>")
 
 
 def escribir(r, destino):
@@ -469,6 +519,16 @@ def escribir(r, destino):
 
 <section><h2>Matrices de confusión</h2><p class="nota">En el punto de operación de {po['alertas_por_mes']} alertas por mes. Como todos los modelos marcan la misma cantidad de alimentadores, la diferencia de falsos positivos entre ellos es exactamente la diferencia de verdaderos positivos.</p><div class="rejilla" id="g-matrices"></div></section>
 
+<section><h2>Dónde acierta y dónde se equivoca el modelo</h2>
+<p>En la prueba, con {po['alertas_por_mes']} alertas por mes en toda la red durante {r['errores']['meses']} meses, el modelo recomendado acertó {r['errores']['aciertos']} alertas, dio {r['errores']['falsas']} falsas alarmas y dejó {r['errores']['no_previstos']} cortes sin prever. De cada 100 alertas, {100 * r['errores']['precision_global']:.0f} tuvieron un corte en los tres meses siguientes, frente a {100 * r['errores']['tasa_base']:.0f} si se eligieran al azar.</p>
+<p><b>Fortaleza.</b> La precisión crece con el historial de vegetación del alimentador: los que acumulan muchos eventos casi siempre vuelven a tenerlos. {r['errores']['siempre_acierta']} alimentadores acertaron todos los meses.</p>
+<p><b>Debilidad 1, falsas alarmas.</b> Las alertas en alimentadores sin vegetación en los últimos doce meses aciertan solo {_pct(r['errores']['reciente']['sin_vegetacion_12m']['precision'])} ({r['errores']['reciente']['sin_vegetacion_12m']['alertas']} alertas), frente a {_pct(r['errores']['reciente']['con_vegetacion_12m']['precision'])} con vegetación reciente: son alimentadores con muchas interrupciones de otras causas, que la variable de interrupciones empuja hacia arriba. Parte de las falsas alarmas pueden ser podas que funcionaron, pero sin marcar si una poda fue preventiva no se pueden separar.</p>
+<p><b>Debilidad 2, cortes no previstos.</b> El {_pct(r['errores']['no_previstos_sin_vegetacion_12m'])} de los cortes no previstos ocurrió en alimentadores sin vegetación en el año anterior, y el {_pct(r['errores']['no_previstos_sin_historial'])} en alimentadores sin ningún evento desde 2024: el primer evento es el punto ciego de cualquier modelo por historial.</p>
+<div id="g-errores"></div>
+<h3>Resultado por alimentador</h3>
+<p class="nota">Alimentadores con alguna alerta o algún corte no previsto en la prueba. Ordene por cualquier columna; los de Los Olivos van resaltados.</p>
+<div class="tabla tabla-alta">{tabla_errores(r)}</div></section>
+
 <section><h2>Sin redundancia con el índice</h2>
 <p>Variables del modelo: {variables}. Variables del índice dentro del modelo: <b>{', '.join(del_indice) if del_indice else 'ninguna'}</b>. El reloj de poda, el SAIDI y la exposición por clientes y potencia entran solo al índice. Las interrupciones de los últimos doce meses sí entran al modelo, porque Pluz las pidió como indicador principal; el mapa muestra cuánto se parecen al SAIDI y al resto de variables del índice en el último corte.</p>
 <div id="g-redundancia"></div>
@@ -481,6 +541,7 @@ def escribir(r, destino):
 <p class="nota">Casos reales del periodo de prueba, clasificados en el punto de operación de {po['alertas_por_mes']} alertas por mes. VP: verdadero positivo; FP: falso positivo; FN: falso negativo; VN: verdadero negativo. La columna de eventos reales muestra cuántas interferencias tuvo el alimentador en cada uno de los tres meses siguientes al corte.</p>
 <div class="selector" id="filtro-ejemplos"><button data-modelo="" class="activo">Todos</button>{filtro}</div>
 <div class="tabla">{tabla_ejemplos(r)}</div></section>
+{seccion_literatura()}
 """.replace("{nota_aporte}", nota_aporte)
     pagina = (
         "<!doctype html><html lang='es'><head><meta charset='utf-8'>"

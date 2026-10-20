@@ -14,3 +14,10 @@ __pycache__/
 # No se publica porque el repositorio es público.
 Readme-contexto.md
 flujo-de-datos.txt
+
+# Archivos de Pluz que llegan a docs: el repositorio es público
+docs/*.xlsx
+docs/Pluz*.pdf
+
+# Literatura: los PDF quedan en el equipo, el README con las referencias sí se publica
+papers/*.pdf

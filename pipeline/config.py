@@ -104,7 +104,23 @@ FUENTES = {
         "modo": "foto",
         "obligatoria": False,   # solo se usa para avisar de causas nuevas
     },
+    "postes_mt": {
+        # Postes de media tensión con coordenadas. No traen alimentador ni subestación, y las
+        # interrupciones no registran el poste, así que no entran al modelo: sirven para
+        # ubicar en la calle la unidad elegida y para buscar por código de poste.
+        "patrones": ["*postes*mt*.xlsx"],
+        "hoja": 0,
+        "encabezado": "auto",
+        "columnas": ["CÓDIGO DE POSTE", "STRUCTURE NODE LONGITUD\nX",
+                     "STRUCTURE NODE LATITUD\nY", "DISTRITO"],
+        "modo": "foto",
+        "obligatoria": False,
+    },
 }
+
+# Un poste se asigna a la subestación aérea más cercana si está a menos de esta distancia.
+# Más lejos, se muestra en el mapa pero sin subestación.
+DISTANCIA_POSTE_SED_M = 400
 
 # Modelo
 CAUSAS_VEGETACION = ["Crecimiento de árbol", "Tala de árbol"]

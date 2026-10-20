@@ -47,6 +47,10 @@
   }
   // Límite administrativo y avenidas de Los Olivos, de OpenStreetMap.
   const GEO = window.GEO_LOS_OLIVOS;
+  // Postes de media tensión del piloto, de la base que envió Pluz. Cada uno lleva la
+  // subestación aérea más cercana, asignada en el pipeline. Solo sirven para ubicarse.
+  const POSTES = ((window.POSTES_MT && window.POSTES_MT.distritos.LOL) || [])
+    .map(([poste, lon, lat, sed]) => ({ poste, lon, lat, sed }));
 
   // Un parámetro en la dirección permite abrir la página directamente en un tema, lo que
   // sirve para incrustarla o para capturarla en un informe sin depender de la
@@ -80,6 +84,12 @@
     modelo: 1,          // 1 vigente, 2 alternativo
     tramo: null,        // índice del paso de la rampa, 0 a 6
     alimentador: null,  // código de alimentador
+    postesHallados: [], // postes que coinciden con la búsqueda
+    // Unidad elegida con un clic en la lista o en el mapa: los indicadores la describen,
+    // pero la lista no se filtra, para poder seguir recorriéndola.
+    enfoque: null,
+    // Fondo del mapa: el coroplético de siempre o el satelital con vías y nombres.
+    fondo: parametros.get("fondo") === "satelital" ? "satelital" : "coropletico",
   };
 
   /* ------------------------------------------------------------------ utilidades */
@@ -203,6 +213,16 @@
   const alimentadorDe = (u) =>
     estado.nivel === "alimentadores" ? u.id : u.alimentador;
 
+  // Postes que coinciden con la búsqueda. Solo se busca poste cuando el texto lo parece,
+  // con su prefijo o con al menos seis cifras: un código de subestación como 02379A
+  // aparecería dentro de muchos códigos de poste y la búsqueda dejaría de servir.
+  function postesBuscados() {
+    const q = estado.busqueda.toLowerCase();
+    if (!q || !(/^(per)?-?ap[yu]/.test(q) || /^\d{6,}$/.test(q))) return [];
+    const hallados = POSTES.filter((p) => p.poste.toLowerCase().includes(q));
+    return hallados.length <= 20 ? hallados : [];
+  }
+
   function coincide(u) {
     if (estado.tramo !== null && escalaColor(u.indice) !== escalaColor.range()[estado.tramo]) {
       return false;
@@ -210,8 +230,14 @@
     if (estado.alimentador && alimentadorDe(u) !== estado.alimentador) return false;
     if (estado.busqueda) {
       const q = estado.busqueda.toLowerCase();
-      if (!(u.id + " " + (u.alimentador || "") + " " + (u.direccion || ""))
-          .toLowerCase().includes(q)) return false;
+      // Un código completo, escrito o elegido en la curva, selecciona solo esa unidad.
+      if (unidades().some((x) => x.id.toLowerCase() === q)) return u.id.toLowerCase() === q;
+      const texto = (u.id + " " + (u.alimentador || "") + " " + (u.direccion || "")).toLowerCase();
+      const porPoste = estado.postesHallados.some((p) => {
+        const sed = porSubestacion.get(p.sed);
+        return sed && (estado.nivel === "alimentadores" ? sed.alimentador === u.id : sed.id === u.id);
+      });
+      if (!texto.includes(q) && !porPoste) return false;
     }
     return true;
   }
@@ -223,6 +249,8 @@
     estado.tramo = null;
     estado.alimentador = null;
     estado.busqueda = "";
+    estado.postesHallados = [];
+    estado.enfoque = null;
     $("#buscar").value = "";
   }
 
@@ -247,13 +275,20 @@
   // apoyarse en el borde o salirse de él.
   const recorteDistrito = svgMapa.append("defs").append("clipPath")
     .attr("id", "recorte-distrito").append("path");
-  const capaRecortada = svgMapa.append("g").attr("clip-path", "url(#recorte-distrito)");
+  // Todas las capas van en un lienzo que se puede acercar: Pluz pidió que el mapa lleve a
+  // la calle de la unidad elegida y no se quede en el cuadrante.
+  const lienzo = svgMapa.append("g").attr("class", "lienzo");
+  const capaSatelite = lienzo.append("g").attr("class", "capa-satelite");
+  const capaRecortada = lienzo.append("g").attr("clip-path", "url(#recorte-distrito)");
   const capaCeldas = capaRecortada.append("g").attr("class", "capa-celdas");
   const capaFronteras = capaRecortada.append("g").attr("class", "capa-fronteras");
   const capaPuntos = capaRecortada.append("g").attr("class", "capa-puntos");
   const capaVias = capaRecortada.append("g").attr("class", "capa-vias");
-  const capaContornos = svgMapa.append("g").attr("class", "capa-contornos");
-  const capaPlan = svgMapa.append("g").attr("class", "capa-plan");
+  const capaReferencia = lienzo.append("g").attr("class", "capa-referencia");
+  const capaPostes = lienzo.append("g").attr("class", "capa-postes");
+  const capaContornos = lienzo.append("g").attr("class", "capa-contornos");
+  const capaPlan = lienzo.append("g").attr("class", "capa-plan");
+  const capaHallazgo = lienzo.append("g").attr("class", "capa-hallazgo");
 
   let geometria = null;
 
@@ -268,10 +303,9 @@
 
   function calcularGeometria(ancho, alto) {
     const margen = 10;
-    // Mercator transversa rotada al meridiano central del distrito. Equivale a trabajar
-    // en la zona UTM local: conforme y con distorsión despreciable a esta escala.
-    const meridiano = d3.mean(subestacionesMapa, (d) => d.lon);
-    const proyeccion = d3.geoTransverseMercator().rotate([-meridiano, 0]);
+    // Mercator sin rotación, la proyección de las teselas del fondo satelital. A la escala
+    // de un distrito es conforme y su distorsión no se distingue de la de la zona UTM local.
+    const proyeccion = d3.geoMercator();
 
     // El encuadre lo manda el distrito, no la nube de puntos: así el mapa es el mapa de
     // Los Olivos y no el del trozo que casualmente tiene subestaciones.
@@ -293,6 +327,10 @@
       return { sed: d, x: p[0], y: p[1] };
     });
     const noExpuestos = DATOS.no_expuestas.map((d) => proyeccion([d.lon, d.lat]));
+    const postes = POSTES.map((d) => {
+      const p = proyeccion([d.lon, d.lat]);
+      return { ...d, x: p[0], y: p[1] };
+    });
 
     // Las celdas ya no se recortan contra una envolvente convexa. El recorte contra el
     // límite real del distrito, que es cóncavo, lo hace un clipPath de SVG: el navegador
@@ -312,7 +350,7 @@
 
     const bordeDerecho = d3.max(limite, (p) => p[0]);
     const bordeIzquierdo = d3.min(limite, (p) => p[0]);
-    return { proyeccion, puntos, noExpuestos, limite, avenidas, marco, celdas,
+    return { proyeccion, puntos, noExpuestos, postes, limite, avenidas, marco, celdas,
              delaunay, voronoi, ancho, alto, bordeDerecho, bordeIzquierdo, reserva };
   }
 
@@ -416,7 +454,128 @@
            .attr("width", ancho).attr("height", alto);
     geometria = calcularGeometria(ancho, alto);
     recorteDistrito.attr("d", camino(geometria.limite));
+    zoom.extent([[0, 0], [ancho, alto]]).translateExtent([[0, 0], [ancho, alto]]);
+    svgMapa.call(zoom.transform, d3.zoomIdentity);
     pintarMapa();
+    pedirTeselas();
+  }
+
+  /* ------------------------------------------------------------ acercamiento */
+
+  // Con la rueda solo se acerca si se mantiene Ctrl, para no secuestrar el desplazamiento
+  // de la página. Con dos dedos en el teléfono y con los botones se acerca siempre.
+  let escalaMapa = 1;
+  let transformMapa = d3.zoomIdentity;
+  const zoom = d3.zoom().scaleExtent([1, 40])
+    .filter((e) => (e.type !== "wheel" || e.ctrlKey || e.metaKey) && !e.button)
+    .on("zoom", (e) => {
+      escalaMapa = e.transform.k;
+      transformMapa = e.transform;
+      lienzo.attr("transform", e.transform);
+      ajustarAEscala();
+      pedirTeselas();
+    });
+
+  // Las teselas se recalculan una vez por cuadro, no en cada evento del acercamiento.
+  let teselasPendientes = false;
+  function pedirTeselas() {
+    if (teselasPendientes) return;
+    teselasPendientes = true;
+    requestAnimationFrame(() => {
+      teselasPendientes = false;
+      if (!geometria || !window.TESELAS) return;
+      window.TESELAS.actualizar({
+        base: capaSatelite, referencia: capaReferencia, proyeccion: geometria.proyeccion,
+        transform: transformMapa, ancho: geometria.ancho, alto: geometria.alto,
+        activo: estado.fondo === "satelital",
+      });
+    });
+  }
+
+  function fijarFondo(fondo) {
+    estado.fondo = fondo;
+    lienzo.classed("satelital", fondo === "satelital");
+    d3.selectAll("#mapa-fondo button")
+      .classed("activo", function () { return this.dataset.fondo === fondo; })
+      .attr("aria-checked", function () { return String(this.dataset.fondo === fondo); });
+    $("#mapa-atribucion").hidden = fondo !== "satelital";
+    $("#mapa-atribucion").textContent = window.TESELAS ? window.TESELAS.ATRIBUCION : "";
+    pedirTeselas();
+  }
+  svgMapa.call(zoom).on("dblclick.zoom", null);
+
+  // Lo que debe conservar su tamaño en pantalla se corrige con la escala: marcas, postes y
+  // el anillo del poste buscado. Las etiquetas del margen y los rótulos de avenidas solo
+  // tienen sentido con el distrito entero a la vista.
+  function ajustarAEscala() {
+    const k = escalaMapa;
+    lienzo.classed("acercado", k > 1.05);
+    capaPlan.selectAll("g.marca").attr("transform", (m) => `translate(${m.x},${m.y}) scale(${1 / k})`);
+    capaPostes.attr("display", k >= 2.5 ? null : "none");
+    capaPostes.selectAll("circle").attr("r", (p) => (p.propio ? 3.2 : 2) / k);
+    capaHallazgo.selectAll("circle").attr("r", 9 / k).attr("stroke-width", 2.5 / k);
+    capaPuntos.selectAll("circle.punto-no-expuesto").attr("r", 1.1 / Math.sqrt(k));
+    $("#mapa-escala").textContent = k > 1.05 ? `${coma(k, 1)}×` : "";
+  }
+
+  // Lleva el mapa a un conjunto de puntos del lienzo, con un mínimo de acercamiento para
+  // que una sola subestación quede a escala de calle.
+  // En la vista coroplética basta ver la celda con sus vecinas; en la satelital se acerca
+  // hasta que se leen las calles.
+  function acercarA(puntos, kMinimo = 8, kMaximo = estado.fondo === "satelital" ? 18 : 7) {
+    if (!geometria || !puntos.length) return;
+    const xs = puntos.map((p) => p.x), ys = puntos.map((p) => p.y);
+    const [x0, x1] = d3.extent(xs), [y0, y1] = d3.extent(ys);
+    const { ancho, alto } = geometria;
+    const k = Math.min(kMaximo, Math.max(kMinimo,
+      0.8 * Math.min(ancho / Math.max(x1 - x0, 1), alto / Math.max(y1 - y0, 1))));
+    const t = d3.zoomIdentity.translate(ancho / 2, alto / 2).scale(k)
+      .translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
+    svgMapa.transition().duration(650).call(zoom.transform, t);
+  }
+
+  // Puntos del lienzo de una unidad: sus subestaciones y, si las hay, sus postes.
+  function puntosDeUnidad(u) {
+    if (!geometria || !u) return [];
+    const esAlim = !u.alimentador;
+    const seds = geometria.puntos.filter((p) => (esAlim ? p.sed.alimentador === u.id : p.sed.id === u.id));
+    const ids = new Set(seds.map((p) => p.sed.id));
+    return seds.concat(geometria.postes.filter((p) => ids.has(p.sed)));
+  }
+
+  function verUnidadEnMapa(id, desplazar = true) {
+    const u = buscarUnidad(id);
+    acercarA(puntosDeUnidad(u), u && u.alimentador ? (estado.fondo === "satelital" ? 10 : 5) : 2.5);
+    if (desplazar) $("#mapa-caja").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  // Clic en una fila de la lista: fija la unidad y el mapa, que está al lado, va a ella.
+  // Un segundo clic en la misma fila la suelta y devuelve el distrito entero.
+  function elegirDeLista(id) {
+    if (enfocar(id)) verUnidadEnMapa(id, false);
+    else verDistritoEntero();
+  }
+
+  // Clic en una celda del mapa: igual que en la lista, pero sin mover el mapa, que es justo
+  // donde está mirando quien hace clic.
+  function elegirDeMapa(id) {
+    enfocar(id);
+  }
+
+  // Elige una unidad o la suelta si ya estaba elegida. Devuelve si quedó elegida.
+  function enfocar(id) {
+    const soltar = estado.enfoque === id;
+    estado.enfoque = soltar ? null : id;
+    estado.fijado = soltar ? null : id;
+    activar(id, null);
+    if (!soltar) acercarFila(id);
+    dibujarResumen();
+    dibujarFiltros();
+    return !soltar;
+  }
+
+  function verDistritoEntero() {
+    svgMapa.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
   }
 
   function pintarMapa() {
@@ -442,7 +601,7 @@
       .on("pointerenter", (evento, c) => activar(claveDeCelda(c.punto.sed), evento))
       .on("pointermove", (evento) => moverFicha(evento))
       .on("pointerleave", () => desactivar())
-      .on("click", (evento, c) => fijar(claveDeCelda(c.punto.sed)))
+      .on("click", (evento, c) => elegirDeMapa(claveDeCelda(c.punto.sed)))
       .append("title")
       .text((c) => {
         const u = unidadDeCelda(c.punto.sed);
@@ -473,6 +632,21 @@
         .attr("class", clase)
         .attr("d", (segs) => caminoSegmentos(segs));
     }
+
+    // Postes de media tensión. Se ven al acercar; los de la unidad elegida, más marcados.
+    const sedsActivas = new Set(puntosDeUnidad(buscarUnidad(claveActiva()))
+      .filter((p) => p.sed && p.sed.id).map((p) => p.sed.id));
+    capaPostes.selectAll("circle")
+      .data(geometria.postes, (p) => p.poste)
+      .join((e) => e.append("circle").call((c) => c.append("title")))
+      .each((p) => { p.propio = sedsActivas.has(p.sed); })
+      .attr("class", (p) => (p.propio ? "poste propio" : "poste"))
+      .attr("cx", (p) => p.x).attr("cy", (p) => p.y)
+      .select("title").text((p) => `Poste ${p.poste}` + (p.sed ? `, subestación más cercana ${p.sed}` : ""));
+    capaHallazgo.selectAll("circle")
+      .data(geometria.postes.filter((p) => estado.postesHallados.some((h) => h.poste === p.poste)), (p) => p.poste)
+      .join("circle").attr("class", "anillo-hallazgo")
+      .attr("cx", (p) => p.x).attr("cy", (p) => p.y);
 
     capaPuntos.selectAll("circle.punto-no-expuesto")
       .data(geometria.noExpuestos)
@@ -542,6 +716,7 @@
 
     dibujarRotulosVias(marcas);
     dibujarEtiquetas(marcas);
+    ajustarAEscala();
   }
 
   // Rótulos de las avenidas. Se colocan en el punto medio del tramo más largo de cada
@@ -760,11 +935,11 @@
       .on("pointerenter", (_, d) => activar(d.id, null))
       .on("pointerleave", () => desactivar())
       .on("focus", (_, d) => activar(d.id, null))
-      .on("click", (_, d) => fijar(d.id))
+      .on("click", (_, d) => elegirDeLista(d.id))
       .on("keydown", (evento, d) => {
         if (evento.key === "Enter" || evento.key === " ") {
           evento.preventDefault();
-          fijar(d.id);
+          elegirDeLista(d.id);
         }
       });
     tr.selectAll("td").remove();
@@ -802,7 +977,10 @@
     // fija el corte sobre el total, no sobre lo que el filtro deja ver. Se cuenta cuántas
     // de las filas visibles están de verdad dentro del plan.
     const enPlan = filas.filter((d) => seleccionadas.has(d.id)).length;
-    $("#lista-nota").textContent = hayFiltro()
+    const posteFuera = estado.postesHallados.length && !filas.length;
+    $("#lista-nota").textContent = posteFuera
+      ? `El poste está más cerca de una subestación de otro distrito (${estado.postesHallados[0].sed || "sin subestación cercana"}); el mapa lo muestra igual.`
+      : hayFiltro()
       ? `${filas.length} de ${unidades().length} ${etiquetaNivel()} coinciden con el filtro. ` +
         `${enPlan} de ellas ${enPlan === 1 ? "está" : "están"} dentro del plan de ${estado.corte}.`
       : `${filas.length} ${etiquetaNivel()} del piloto. ` +
@@ -837,9 +1015,12 @@
 
   function dibujarFiltros() {
     const barra = $("#filtros");
-    barra.hidden = !hayFiltro();
+    barra.hidden = !hayFiltro() && !estado.enfoque;
     if (barra.hidden) return;
     const chips = [];
+    if (estado.enfoque) {
+      chips.push({ clave: "enfoque", texto: `Unidad seleccionada: ${estado.enfoque}` });
+    }
     if (estado.tramo !== null) {
       const [a, b] = rangoTramo(estado.tramo);
       chips.push({
@@ -852,7 +1033,9 @@
       chips.push({ clave: "alimentador", texto: `Alimentador ${estado.alimentador}` });
     }
     if (estado.busqueda) {
-      chips.push({ clave: "busqueda", texto: `"${estado.busqueda}"` });
+      const n = estado.postesHallados.length;
+      chips.push({ clave: "busqueda", texto: n ? `Poste "${estado.busqueda}", ${n} ${n === 1 ? "hallado" : "hallados"}`
+                                                : `"${estado.busqueda}"` });
     }
     const sel = d3.select("#filtros-chips").selectAll("span.chip")
       .data(chips, (c) => c.clave)
@@ -861,15 +1044,17 @@
       (c.muestra ? `<span class="chip-muestra" style="background:${c.muestra}"></span>` : "") +
       `<span>${c.texto}</span><button type="button" aria-label="Quitar filtro">×</button>`);
     sel.select("button").on("click", (_, c) => {
+      if (c.clave === "enfoque") { estado.enfoque = null; estado.fijado = null; verDistritoEntero(); }
       if (c.clave === "tramo") estado.tramo = null;
       if (c.clave === "alimentador") estado.alimentador = null;
-      if (c.clave === "busqueda") { estado.busqueda = ""; $("#buscar").value = ""; }
+      if (c.clave === "busqueda") { estado.busqueda = ""; estado.postesHallados = []; $("#buscar").value = ""; }
       actualizar();
     });
 
     const n = unidades().filter(coincide).length;
-    barra.querySelector(".filtros-titulo").textContent =
-      `${n} ${etiquetaNivel()} ${n === 1 ? "coincide" : "coinciden"}`;
+    barra.querySelector(".filtros-titulo").textContent = hayFiltro()
+      ? `${n} ${etiquetaNivel()} ${n === 1 ? "coincide" : "coinciden"}`
+      : `Indicadores de ${estado.nivel === "alimentadores" ? "un alimentador" : "una subestación"}`;
   }
 
   // Al fijar una unidad desde el mapa o desde la curva, la lista tiene 252 filas y lo más
@@ -896,22 +1081,44 @@
       .map((id) => porAlimentador.get(id)).filter(Boolean);
   }
 
+  // Con una búsqueda o un filtro puestos, los indicadores pasan a describir lo encontrado y
+  // no el plan entero: es lo que pidió Pluz al buscar una subestación o un alimentador.
   function dibujarResumen() {
-    const sel = seleccion();
+    const enfocada = estado.enfoque ? buscarUnidad(estado.enfoque) : null;
+    const filtrando = hayFiltro() || Boolean(enfocada);
+    const plan = clavesSeleccionadas();
+    const sel = enfocada ? [enfocada] : hayFiltro() ? unidades().filter(coincide) : seleccion();
     const us = unidades();
     const totalClientes = d3.sum(us, (d) => d.clientes);
     const clientes = d3.sum(sel, (d) => d.clientes);
     const alimPlan = alimentadoresDe(sel);
     const saidiPlan = d3.sum(alimPlan, (d) => d.saidi_ltm);
     const saidiTotal = d3.sum(DATOS.alimentadores, (d) => d.saidi_ltm);
+    const vegPlan = d3.sum(alimPlan, (d) => d.eventos_12m);
     const intPlan = d3.sum(alimPlan, (d) => d.interrupciones_12m);
-    const intHist = d3.sum(alimPlan, (d) => d.interrupciones_hist);
+    const quienes = filtrando
+      ? (alimPlan.length === 1 ? `del alimentador ${alimPlan[0].id}` : "de los alimentadores encontrados")
+      : "de los alimentadores del plan";
 
+    d3.select(".tarjetas").classed("filtradas", filtrando);
     $("#kpi-unidades").textContent = sel.length;
-    $("#kpi-unidades-et").textContent =
-      estado.nivel === "alimentadores" ? "Alimentadores en el plan" : "Subestaciones en el plan";
-    $("#kpi-unidades-pie").textContent =
-      `de ${us.length} ${etiquetaNivel()} del piloto`;
+    if (filtrando) {
+      const dentro = sel.filter((d) => plan.has(d.id)).length;
+      $("#kpi-unidades-et").textContent = sel.length === 1
+        ? `${estado.nivel === "alimentadores" ? "Alimentador" : "Subestación"} ${sel[0].id}, puesto ${sel[0].puesto}`
+        : `${estado.nivel === "alimentadores" ? "Alimentadores" : "Subestaciones"} que coinciden con la búsqueda`;
+      $("#kpi-unidades-pie").textContent = sel.length === 1
+        ? (dentro ? "Entra al plan" : "Fuera del plan actual")
+        : `${dentro} de ${sel.length} dentro del plan`;
+    } else {
+      $("#kpi-unidades-et").textContent =
+        estado.nivel === "alimentadores" ? "Alimentadores en el plan" : "Subestaciones en el plan";
+      $("#kpi-unidades-pie").textContent = `de ${us.length} ${etiquetaNivel()} del piloto`;
+    }
+    $("#kpi-clientes-et").textContent = filtrando
+      ? "Clientes de baja tensión de lo encontrado" : "Clientes de baja tensión cubiertos";
+    $("#kpi-saidi-et").textContent = `Minutos de SAIDI del último año ${quienes}`;
+    $("#kpi-veg-et").textContent = `Interrupciones por vegetación y no ubicadas del último año ${quienes}`;
 
     $("#kpi-clientes").textContent = miles(clientes);
     $("#kpi-clientes-pie").textContent = totalClientes
@@ -922,8 +1129,9 @@
       ? `${coma((saidiPlan / saidiTotal) * 100, 0)} % del SAIDI del piloto, ` +
         `${alimPlan.length} ${alimPlan.length === 1 ? "alimentador" : "alimentadores"}` : "-";
 
-    $("#kpi-interrupciones").textContent = miles(intPlan);
-    $("#kpi-interrupciones-pie").textContent = `${miles(intHist)} desde ${INICIO_DATOS}`;
+    $("#kpi-interrupciones").textContent = miles(vegPlan);
+    $("#kpi-interrupciones-pie").textContent =
+      `de ${miles(intPlan)} interrupciones por todas las causas`;
   }
 
   /* -------------------------------------------------------------------- curva */
@@ -931,6 +1139,22 @@
   // Dos gráficos apilados sobre el mismo eje de puesto. Nunca dos escalas verticales en un
   // mismo marco: el índice y el porcentaje acumulado de clientes son magnitudes distintas
   // y superponerlas en un solo panel invita a leer cruces que no significan nada.
+  // Escalas de la última curva dibujada. Pasar el puntero solo mueve la marca de la unidad
+  // activa: si se redibujara la curva entera, la barra bajo el puntero se reemplazaría y el
+  // clic se perdería entre el botón presionado y el soltado.
+  let curvaGeo = null;
+  function marcarCurva() {
+    if (!curvaGeo) return;
+    const { x, yA, anchoBarra, datos, capa } = curvaGeo;
+    const d = datos.find((u) => u.id === claveActiva());
+    capa.selectAll("rect").data(d ? [d] : []).join("rect").attr("class", "curva-activa")
+      .attr("x", x(d ? d.puesto : 0) - anchoBarra / 2 - 1.5)
+      .attr("y", d ? yA(d.indice) - 1.5 : 0)
+      .attr("width", anchoBarra + 3)
+      .attr("height", d ? yA(0) - yA(d.indice) + 3 : 0)
+      .attr("rx", 3).attr("pointer-events", "none");
+  }
+
   function dibujarCurva() {
     const caja = $("#curva-caja");
     const ancho = Math.max(300, caja.clientWidth);
@@ -986,7 +1210,6 @@
     // Panel de arriba: el índice de cada unidad en su puesto, con el color de la rampa.
     // Es la vista que muestra dónde se aplana la curva, que es la pregunta de capacidad.
     const anchoBarra = Math.max(1, (x(2) - x(1)) - (total > 80 ? 0.5 : 2));
-    const activa = claveActiva();
     svg.append("g").selectAll("rect").data(datos).join("rect")
       .attr("class", "curva-barra")
       .attr("x", (d) => x(d.puesto) - anchoBarra / 2)
@@ -997,23 +1220,12 @@
       .attr("fill", (d) => color(d.indice))
       // Dos atenuaciones que se multiplican: estar fuera del plan y no pasar el filtro.
       .attr("opacity", (d) => (d.puesto <= estado.corte ? 1 : 0.55) * (d.pasa ? 1 : 0.22))
-      .on("pointerenter", (_, d) => activar(d.id, null))
-      .on("pointerleave", () => desactivar())
-      .on("click", (_, d) => fijar(d.id))
-      .append("title").text((d) =>
-        `Puesto ${d.puesto}. ${d.id}, índice ${coma(d.indice, 0)}. Clic para fijarla.`);
+      .attr("pointer-events", "none");
 
     // La unidad activa se marca también aquí: es lo que cierra el círculo entre el mapa,
-    // la lista y la curva.
-    const dActiva = datos.find((d) => d.id === activa);
-    if (dActiva) {
-      svg.append("rect").attr("class", "curva-activa")
-        .attr("x", x(dActiva.puesto) - anchoBarra / 2 - 1.5)
-        .attr("y", yA(dActiva.indice) - 1.5)
-        .attr("width", anchoBarra + 3)
-        .attr("height", yA(0) - yA(dActiva.indice) + 3)
-        .attr("rx", 3);
-    }
+    // la lista y la curva. Va en su propio grupo para moverla sin redibujar la curva.
+    curvaGeo = { x, yA, anchoBarra, datos, capa: svg.append("g").attr("class", "curva-marca") };
+    marcarCurva();
 
     // Panel de abajo: qué porcentaje de los clientes del piloto queda cubierto al llegar a
     // ese puesto. Es el argumento con el que se defiende el tamaño del plan.
@@ -1021,6 +1233,19 @@
     const linea = d3.line().x((d) => x(d.puesto)).y((d) => yB(d.cobertura));
     svg.append("path").datum(datos).attr("class", "curva-area").attr("d", area);
     svg.append("path").datum(datos).attr("class", "curva-linea").attr("d", linea);
+
+    // Columnas de clic, del ancho de cada puesto y de la altura de los dos paneles: con 251
+    // subestaciones una barra mide un par de píxeles y sería difícil acertarle.
+    const anchoColumna = x(1.5) - x(0.5);
+    svg.append("g").selectAll("rect").data(datos).join("rect")
+      .attr("class", "curva-columna")
+      .attr("x", (d) => x(d.puesto) - anchoColumna / 2).attr("width", anchoColumna)
+      .attr("y", m.arriba).attr("height", hA + hueco + hB)
+      .on("pointerenter", (_, d) => activar(d.id, null))
+      .on("pointerleave", () => desactivar())
+      .on("click", (_, d) => elegirDesdeCurva(d.id))
+      .append("title").text((d) =>
+        `Puesto ${d.puesto}. ${d.id}, índice ${coma(d.indice, 0)}. Clic para buscarla y verla en el mapa.`);
 
     // Línea de corte y su rótulo, en los dos paneles.
     svg.append("line").attr("class", "curva-corte")
@@ -1104,8 +1329,37 @@
   function sincronizarSeleccion() {
     pintarMapa();
     d3.select("#tabla-cuerpo").selectAll("tr").classed("activa", (d) => d.id === claveActiva());
-    dibujarCurva();
+    marcarCurva();
     dibujarDetalle();
+  }
+
+  // Una sola entrada para buscar, sea desde el campo de texto o desde una barra de la curva:
+  // filtra la lista y los indicadores, fija la unidad y lleva el mapa a su calle. Un
+  // resultado único, o un poste encontrado, se fija; sin texto, el mapa vuelve al distrito.
+  function buscar(texto) {
+    estado.enfoque = null;
+    estado.busqueda = String(texto || "").trim();
+    $("#buscar").value = estado.busqueda;
+    estado.postesHallados = postesBuscados();
+    const hallados = unidades().filter(coincide);
+    if (estado.busqueda && hallados.length === 1) estado.fijado = hallados[0].id;
+    actualizar();
+    if (estado.postesHallados.length) {
+      const pts = geometria.postes.filter((p) => estado.postesHallados.some((h) => h.poste === p.poste));
+      if (hallados.length) { estado.fijado = hallados[0].id; sincronizarSeleccion(); }
+      acercarA(pts, 14);
+    } else if (estado.busqueda && hallados.length === 1) {
+      acercarFila(hallados[0].id);
+      verUnidadEnMapa(hallados[0].id);
+    } else if (!estado.busqueda) {
+      verDistritoEntero();
+    }
+  }
+
+  // Clic en una barra de la curva: la unidad pasa al buscador y el mapa va a ella. Un
+  // segundo clic en la misma barra la suelta y devuelve el distrito entero.
+  function elegirDesdeCurva(id) {
+    buscar(estado.busqueda.toLowerCase() === id.toLowerCase() ? "" : id);
   }
 
   function fijar(id) {
@@ -1134,7 +1388,7 @@
       `<dt>Sin poda</dt><dd>${textoPoda(u)}</dd>` +
       `<dt>Clientes</dt><dd>${miles(u.clientes)}</dd>` +
       `<dt>SAIDI, último año</dt><dd>${coma(u.saidi_ltm, 2)} min</dd>` +
-      `<dt>Interrupciones, último año</dt><dd>${miles(u.interrupciones_12m)}</dd>` +
+      `<dt>Interrupciones por vegetación y no ubicadas, último año</dt><dd>${miles(u.eventos_12m)}</dd>` +
       "</dl>" +
       (enPlan ? `<span class="pastilla">${icono("i-tilde")}Entra al plan</span>` : "");
     ficha.hidden = false;
@@ -1227,9 +1481,10 @@
           <dt>${icono("i-medidor")}Probabilidad de al menos un corte por vegetación en los próximos 3 meses</dt><dd>${pct(u.probabilidad)}</dd>
           <dt>${icono("i-reloj")}Meses desde la última poda</dt><dd>${textoPoda(u, false)}</dd>
           <dt>${icono("i-clientes")}Clientes de baja tensión</dt><dd>${miles(u.clientes)}</dd>
-          <dt>${icono("i-alerta")}Interrupciones del alimentador, último año</dt><dd>${miles(u.interrupciones_12m)}</dd>
+          <dt>${icono("i-alerta")}Interrupciones por vegetación y no ubicadas, último año</dt><dd>${miles(alimentador ? alimentador.eventos_12m : u.eventos_12m)}</dd>
           ${identidad}
         </dl>
+        ${bloqueUbicacion(u)}
       </div>
 
       <div class="bloque">
@@ -1250,9 +1505,10 @@
         <h3>Por qué está en esta posición</h3>
         <ul class="motivos">${motivos}</ul>
         <dl>
-          <dt>${icono("i-alerta")}Eventos históricos del alimentador</dt><dd>${alimentador ? alimentador.eventos_historicos : "-"}</dd>
-          <dt>${icono("i-reloj")}Eventos por vegetación del último año</dt><dd>${alimentador ? alimentador.eventos_12m : "-"}</dd>
-          <dt>${icono("i-alerta")}Interrupciones desde ${INICIO_DATOS}</dt><dd>${alimentador ? miles(alimentador.interrupciones_hist) : "-"}</dd>
+          <dt>${icono("i-alerta")}Por vegetación y no ubicadas desde ${INICIO_DATOS}</dt><dd>${alimentador ? alimentador.eventos_historicos : "-"}</dd>
+          <dt>${icono("i-reloj")}Último año, por árbol: crecimiento o tala</dt><dd>${alimentador ? miles(alimentador.veg_arbol_12m) : "-"}</dd>
+          <dt>${icono("i-reloj")}Último año, no ubicadas en red aérea</dt><dd>${alimentador ? miles(alimentador.no_ubicada_12m) : "-"}</dd>
+          <dt>${icono("i-alerta")}Interrupciones por todas las causas, último año</dt><dd>${alimentador ? miles(alimentador.interrupciones_12m) : "-"}</dd>
           <dt>${icono("i-medidor")}SAIDI de los últimos 12 meses</dt><dd>${alimentador ? coma(alimentador.saidi_ltm, 2) + " min" : "-"}</dd>
         </dl>
       </div>`;
@@ -1260,6 +1516,34 @@
     contenedor.querySelectorAll("button.enlace-alim").forEach((b) => {
       b.addEventListener("click", () => alternarAlimentador(b.dataset.alim));
     });
+    contenedor.querySelectorAll("button.ver-en-mapa").forEach((b) => {
+      b.addEventListener("click", () => {
+        if (b.dataset.fondo) fijarFondo(b.dataset.fondo);
+        verUnidadEnMapa(b.dataset.id);
+      });
+    });
+  }
+
+  // Para llegar a la unidad: el mapa la acerca, y en la vista satelital se ven las calles.
+  // La coordenada va escrita para pasarla a la cuadrilla o pegarla en cualquier navegador.
+
+  function bloqueUbicacion(u) {
+    const poste = estado.postesHallados.find((p) => {
+      const sed = porSubestacion.get(p.sed);
+      return sed && (sed.id === u.id || sed.alimentador === u.id);
+    });
+    const destino = poste || u;
+    const nPostes = u.postes_mt || 0;
+    const que = poste ? `el poste ${poste.poste}` : u.alimentador ? "la subestación" : "el centro del alimentador";
+    return `
+      <div class="ubicacion">
+        <p class="ubicacion-titulo">${icono("i-pin")}Ubicación de ${que}: ${coma(destino.lat, 5)}, ${coma(destino.lon, 5)}</p>
+        <div class="ubicacion-acciones">
+          <button type="button" class="boton boton-sutil ver-en-mapa" data-id="${u.id}">${icono("i-mapa")}Ver en el mapa</button>
+          <button type="button" class="boton boton-sutil ver-en-mapa" data-id="${u.id}" data-fondo="satelital">${icono("i-pin")}Ver calles en vista satelital</button>
+        </div>
+        <p class="ubicacion-nota">${nPostes ? `${miles(nPostes)} ${nPostes === 1 ? "poste" : "postes"} de media tensión cerca de ${u.alimentador ? "esta subestación" : "sus subestaciones"}; se ven al acercar el mapa.` : "Sin postes de media tensión registrados cerca."}</p>
+      </div>`;
   }
 
   /* -------------------------------------------------------------- descarga */
@@ -1273,17 +1557,22 @@
       ? ["Puesto", "Alimentador", "Índice de criticidad (0 a 100)",
          "Probabilidad de corte por vegetación en 3 meses (%)", "Meses desde la última poda",
          "Sin poda registrada", "Clientes de baja tensión", "SAIDI del último año (minutos)",
-         "Interrupciones del último año", "Subestaciones aéreas", "Razones"]
+         "Interrupciones por vegetación y no ubicadas, último año", "Interrupciones por todas las causas, último año",
+         "Subestaciones aéreas", "Postes de media tensión", "Razones"]
       : ["Puesto", "Subestación", "Alimentador", "Dirección", "Índice de criticidad (0 a 100)",
          "Probabilidad de corte por vegetación en 3 meses (%)", "Meses desde la última poda",
          "Clientes de baja tensión", "SAIDI del alimentador, último año (minutos)",
-         "Interrupciones del alimentador, último año"];
+         "Interrupciones por vegetación y no ubicadas del alimentador, último año",
+         "Interrupciones por todas las causas del alimentador, último año",
+         "Postes de media tensión", "Latitud", "Longitud"];
     const filas = sel.map((d) => estado.nivel === "alimentadores"
       ? [d.puesto, d.id, d.indice, porcentaje(d.probabilidad), d.meses_sin_poda,
          d.sin_registro_poda ? "sí" : "no", d.clientes,
-         d.saidi_ltm, d.interrupciones_12m, d.sed_aereas, (d.motivos || []).join(" | ")]
+         d.saidi_ltm, d.eventos_12m, d.interrupciones_12m, d.sed_aereas, d.postes_mt,
+         (d.motivos || []).join(" | ")]
       : [d.puesto, d.id, d.alimentador, d.direccion, d.indice, porcentaje(d.probabilidad),
-         d.meses_sin_poda, d.clientes, d.saidi_ltm, d.interrupciones_12m]);
+         d.meses_sin_poda, d.clientes, d.saidi_ltm, d.eventos_12m, d.interrupciones_12m,
+         d.postes_mt, d.lat, d.lon]);
     const escapar = (v) => {
       const s = String(v === null || v === undefined ? "" : v);
       return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
@@ -1428,15 +1717,17 @@
     actualizar();
   });
 
-  $("#buscar").addEventListener("input", function () {
-    estado.busqueda = this.value.trim();
-    actualizar();
-  });
+  $("#buscar").addEventListener("input", function () { buscar(this.value); });
 
   $("#limpiar-filtros").addEventListener("click", () => {
     limpiarFiltros();
     actualizar();
+    verDistritoEntero();
   });
+
+  $("#mapa-acercar").addEventListener("click", () => svgMapa.transition().duration(300).call(zoom.scaleBy, 2));
+  $("#mapa-alejar").addEventListener("click", () => svgMapa.transition().duration(300).call(zoom.scaleBy, 0.5));
+  $("#mapa-todo").addEventListener("click", verDistritoEntero);
 
   $("#descargar").addEventListener("click", descargarCsv);
 
@@ -1511,6 +1802,7 @@
   escribirPie();
 
   d3.selectAll("#selector-modelo button").on("click", function () { cambiarModelo(+this.dataset.modelo); });
+  d3.selectAll("#mapa-fondo button").on("click", function () { fijarFondo(this.dataset.fondo); });
   if (!MODELOS[2]) $("#control-modelo").hidden = true;
 
   // La página abre con la unidad más crítica ya fijada, para que el panel de detalle
@@ -1525,6 +1817,7 @@
   ajustarCorte();
   construirEscala();
   dibujarMapa();
+  fijarFondo(estado.fondo);
   dibujarFiltros();
   dibujarComparacion();
   dibujarLeyenda();

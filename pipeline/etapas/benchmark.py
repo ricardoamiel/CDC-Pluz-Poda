@@ -428,6 +428,51 @@ def ejemplos(panel, prueba, s, nombre_modelo, k_alerta, n=4):
     return salida.round(4).to_dict(orient="records")
 
 
+def errores_por_perfil(prueba, s, k_alerta, piloto=()):
+    """Dónde acierta y dónde se equivoca el modelo, en el punto de operación.
+
+    Pedido tras la reunión N°3: saber en qué alimentadores predice bien y en cuáles da muchas
+    falsas alarmas. Se mide la precisión de las alertas según el historial de vegetación del
+    alimentador, el perfil de los cortes no previstos y el resultado de cada alimentador.
+    """
+    d = prueba[["alimentador", "periodo", "objetivo", "veg_hist", "veg_12m", "eventos_12m"]].copy()
+    d["alerta"] = lista_operativa(prueba, s, k_alerta)[0]
+    d["vp"] = (d["alerta"] == 1) & (d["objetivo"] == 1)
+    d["fp"] = (d["alerta"] == 1) & (d["objetivo"] == 0)
+    d["fn"] = (d["alerta"] == 0) & (d["objetivo"] == 1)
+    alertas = d[d["alerta"] == 1]
+    tramos = pd.cut(alertas["veg_hist"], [-1, 0, 2, 5, 10, np.inf],
+                    labels=["Ninguno", "1 a 2", "3 a 5", "6 a 10", "Más de 10"])
+    por_historial = [{"tramo": str(t), "alertas": int(len(g)), "aciertos": int(g["vp"].sum()),
+                      "precision": float(g["vp"].mean())}
+                     for t, g in alertas.groupby(tramos, observed=True)]
+    reciente = {nombre: {"alertas": int(len(g)), "precision": float(g["vp"].mean()) if len(g) else None}
+                for nombre, g in (("sin_vegetacion_12m", alertas[alertas["veg_12m"] == 0]),
+                                  ("con_vegetacion_12m", alertas[alertas["veg_12m"] > 0]))}
+    fn = d[d["fn"]]
+    ultimo = d.sort_values("periodo").groupby("alimentador").last()
+    por_alim = d.groupby("alimentador").agg(alertas=("alerta", "sum"), aciertos=("vp", "sum"),
+                                            falsas=("fp", "sum"), no_previstos=("fn", "sum"))
+    por_alim = por_alim.join(ultimo[["veg_hist", "veg_12m", "eventos_12m"]])
+    por_alim = por_alim[(por_alim["alertas"] > 0) | (por_alim["no_previstos"] > 0)]
+    por_alim["piloto"] = por_alim.index.isin(set(piloto))
+    filas = por_alim.reset_index().sort_values(["aciertos", "falsas"], ascending=[False, True])
+    meses = int(d["periodo"].nunique())
+    return {
+        "meses": meses, "tasa_base": float(d["objetivo"].mean()),
+        "precision_global": float(alertas["vp"].mean()),
+        "aciertos": int(d["vp"].sum()), "falsas": int(d["fp"].sum()), "no_previstos": int(d["fn"].sum()),
+        "por_historial": por_historial, "reciente": reciente,
+        "no_previstos_sin_vegetacion_12m": float((fn["veg_12m"] == 0).mean()) if len(fn) else None,
+        "no_previstos_sin_historial": float((fn["veg_hist"] == 0).mean()) if len(fn) else None,
+        "siempre_acierta": int(((por_alim["aciertos"] == meses)).sum()),
+        "siempre_falla": int(((por_alim["falsas"] == meses)).sum()),
+        "alimentadores_alertados": int((por_alim["alertas"] > 0).sum()),
+        "alimentadores": [{k: (v.item() if hasattr(v, "item") else v) for k, v in f.items()}
+                          for f in filas.to_dict(orient="records")],
+    }
+
+
 # --------------------------------------------------------------------------- MLflow
 
 def registrar_mlflow(resultados, reporte):
@@ -459,7 +504,7 @@ def registrar_mlflow(resultados, reporte):
 
 # --------------------------------------------------------------------------- orquestación
 
-def ejecutar(panel, inicio, corte, operativo):
+def ejecutar(panel, inicio, corte, operativo, piloto=()):
     part = particiones(panel, inicio)
     prueba = part["prueba"]
     y = prueba["objetivo"].values
@@ -545,6 +590,7 @@ def ejecutar(panel, inicio, corte, operativo):
     res["ablacion_logistica"] = ablacion_logistica(part, k_alerta)
     res["redundancia"] = redundancia(panel, operativo)
     res["aporte_variables"] = aporte_variables(part)
+    res["errores"] = errores_por_perfil(prueba, puntajes[elegido], k_alerta, piloto)
     res["ejemplos"] = (ejemplos(panel, prueba, puntajes[elegido], elegido, k_alerta) +
                        (ejemplos(panel, prueba, puntajes["XGBoost"], "XGBoost", k_alerta)
                         if elegido != "XGBoost" else []))

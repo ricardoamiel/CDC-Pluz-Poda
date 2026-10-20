@@ -716,7 +716,9 @@ td { font-variant-numeric: tabular-nums; }
 }
 .cifra-pista i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; }
 .cifra-a { background: var(--azul-600); }
-.cifra-b { background: var(--azul-300); }
+.cifra-b { background: var(--verde-cmp); }
+.quien-a { color: var(--azul-600); font-weight: 700; }
+.quien-b { color: var(--verde-cmp); font-weight: 700; }
 .cifra-barra b { text-align: right; font-size: 12.5px; font-variant-numeric: tabular-nums; }
 
 .mapas-cmp {
@@ -731,7 +733,7 @@ td { font-variant-numeric: tabular-nums; }
   color: var(--azul-700); background: var(--azul-100); padding: 2px 8px; border-radius: 999px;
 }
 .top-cmp { margin-top: 12px; }
-.top-cmp .tabla tbody tr { cursor: default; }
+.top-cmp .tabla tbody tr { cursor: pointer; }
 .leyenda-cmp { max-width: 1440px; margin: 0 auto 12px; padding: 0 4px; }
 @media (max-width: 600px) {
   .cifra-fila { grid-template-columns: 1fr; gap: 6px; }
@@ -758,3 +760,74 @@ td { font-variant-numeric: tabular-nums; }
 .cambio { display: inline-block; margin-left: 4px; font-size: 10px; font-weight: 700; }
 .cambio.sube { color: var(--ok); }
 .cambio.baja { color: var(--critico); }
+
+/* Acercamiento del mapa, postes de media tensión y cómo llegar a la unidad. Reunión N°3,
+   puntos 3, 5 y 8: el mapa tiene que llevar a la calle, no quedarse en el cuadrante. */
+#mapa, .mapa-cmp { touch-action: none; }
+.lienzo path, .mapa-cmp path { vector-effect: non-scaling-stroke; }
+.lienzo.acercado .capa-etiquetas, .lienzo.acercado .capa-rotulos { display: none; }
+.mapa-botones {
+  position: absolute; top: 8px; right: 8px; display: flex; flex-direction: column; gap: 4px;
+  align-items: center;
+}
+.mapa-botones .boton-icono {
+  width: 32px; height: 32px; padding: 0; font-size: 18px; font-weight: 700; line-height: 1;
+  display: grid; place-items: center; background: var(--superficie);
+  border: 1px solid var(--borde-fuerte); box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+}
+.mapa-escala { font-size: 11px; font-weight: 700; color: var(--tinta-2); min-height: 14px; }
+.poste { fill: var(--tinta-2); stroke: var(--superficie); stroke-width: .4; opacity: .75; }
+.poste.propio { fill: var(--azul-600); opacity: 1; }
+.anillo-hallazgo { fill: none; stroke: #d6336c; pointer-events: none; }
+.ubicacion {
+  margin-top: 12px; padding: 10px 12px; border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio-s); background: var(--superficie-3);
+}
+.ubicacion-titulo { margin: 0 0 8px; font-weight: 700; font-size: 13px; color: var(--tinta); }
+.ubicacion-titulo .ico { width: 15px; height: 15px; vertical-align: -3px; margin-right: 5px; color: var(--azul-600); }
+.ubicacion-acciones { display: flex; flex-wrap: wrap; gap: 6px; }
+.ubicacion-acciones .boton { text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+.ubicacion-acciones .ico { width: 14px; height: 14px; }
+.ubicacion-nota { margin: 8px 0 0; font-size: 11.5px; color: var(--tinta-3); }
+.tarjetas.filtradas .tarjeta { border-color: var(--azul-600); box-shadow: inset 0 3px 0 var(--azul-600); }
+.mapa-fondo { position: absolute; top: 8px; left: 8px; z-index: 2; box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.mapa-fondo button { font-size: 12px; padding: 5px 10px; }
+.mapa-atribucion {
+  position: absolute; right: 6px; bottom: 4px; margin: 0; font-size: 10px; color: #fff;
+  text-shadow: 0 0 3px #000; pointer-events: none;
+}
+/* En la vista satelital el índice se vuelve una veladura sobre las imágenes, para que se
+   vean las calles; las fronteras y el contorno del plan siguen mandando. */
+.lienzo.satelital .celda { fill-opacity: .32; stroke-opacity: 0; }
+.lienzo.satelital .celda.resaltado { stroke-opacity: 1; }
+.lienzo.satelital .via, .lienzo.satelital .capa-rotulos, .lienzo.satelital .punto-no-expuesto { display: none; }
+.lienzo.satelital .borde-alimentador { stroke: #fff; }
+.lienzo.satelital .contorno-distrito { stroke: #fff; }
+.lienzo.satelital .poste { fill: #fff; stroke: #000; }
+.lienzo.satelital .poste.propio { fill: #ffd43b; }
+.capa-referencia image, .capa-satelite image { pointer-events: none; }
+
+/* Comparar distritos: cada distrito con su color, y los mapas con fondo satelital y postes. */
+.viz-root { --verde-cmp: #3f8a3a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .viz-root { --verde-cmp: #7cc46f; } }
+:root[data-theme="dark"] .viz-root { --verde-cmp: #7cc46f; }
+.cifras-leyenda { display: flex; gap: 16px; margin: 6px 0 0; font-size: 12px; font-weight: 700; color: var(--tinta-2); }
+.cifras-leyenda i { display: inline-block; width: 14px; height: 8px; border-radius: 4px; margin-right: 6px; vertical-align: 1px; }
+.punto-sed { fill: var(--azul-600); stroke: #fff; stroke-width: .5; }
+
+/* Columnas de clic de la curva: invisibles, con cursor de mano. */
+.curva-columna { fill: transparent; cursor: pointer; }
+.curva-columna:hover { fill: var(--azul-600); fill-opacity: .08; }
+
+/* Comparar distritos: cifras de la unidad elegida en la lista, bajo su mapa. */
+.elegida-cmp {
+  margin-top: 10px; padding: 10px 12px; border: 1px solid var(--azul-600);
+  border-radius: var(--radio-s); background: var(--superficie-3); font-size: 12.5px;
+}
+.elegida-tope { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.elegida-tope b { font-size: 14px; color: var(--tinta); }
+.elegida-tope span:not(.ficha-chip) { color: var(--tinta-2); flex: 1; }
+.elegida-tope .ficha-chip { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.elegida-cmp dl { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; }
+.elegida-cmp dt { color: var(--tinta-2); }
+.elegida-cmp dd { margin: 0; text-align: right; font-weight: 700; white-space: nowrap; }

@@ -34,7 +34,9 @@ Los filtros no cambian el plan. El plan lo fija siempre el tamaño elegido: filt
 * Ajusta el tamaño del plan con un control, de modo que la capacidad se puede discutir en la propia reunión y el mapa, la lista, la curva y el resumen se recalculan a la vez.
 * Muestra una ficha por unidad con el índice, la descomposición en sus cuatro componentes frente a la mediana del piloto y las razones principales que entregó el modelo.
 * Resume el plan con cuatro indicadores: unidades, clientes de baja tensión cubiertos, SAIDI del último año e interrupciones del último año de los alimentadores del plan. En la vista por subestación, el SAIDI y las interrupciones se cuentan una sola vez por alimentador, aunque varias subestaciones del plan lo compartan.
-* Descarga el plan seleccionado en CSV, listo para la programación.
+* Descarga el plan seleccionado en CSV, listo para la programación, con la latitud y la longitud de cada subestación.
+* El mapa se acerca con botones, con Ctrl y la rueda o con dos dedos, y tiene dos fondos: el coroplético y uno satelital con las calles y sus nombres, de Esri World Imagery. Las teselas se piden solo cuando se elige la vista satelital. Al acercar aparecen los postes de media tensión, y los de la unidad elegida se resaltan.
+* El buscador encuentra subestaciones, alimentadores, direcciones y postes por su código, lleva el mapa a la calle de lo encontrado y deja los cuatro indicadores describiendo solo eso.
 * Permite cambiar el modelo de riesgo del piloto entre el modelo 1 o vigente, regresión logística, y el modelo 2 o de contraste, XGBoost. Una franja dice cuántas unidades del plan coinciden entre los dos y su correlación de orden, y la lista marca cuántos puestos sube o baja cada unidad. Con los datos al corte de agosto de 2026, los 10 alimentadores del plan son los mismos con los dos modelos, con una correlación de 0,96, y coinciden 73 de las 76 subestaciones.
 * En la pestaña **Comparar distritos** pone el piloto al lado de uno de siete distritos de Lima Norte: San Juan de Lurigancho, Carabayllo, Callao, Puente Piedra, San Martín de Porres, Ventanilla y Comas. Usa el mismo modelo, los mismos componentes y los mismos pesos; el índice se calcula dentro de cada distrito y los dos mapas comparten la escala de 0 a 100. Las cifras absolutas que sí se comparan entre distritos, como el riesgo estimado, el SAIDI o los cortes por vegetación, van en un panel aparte, con una fila por indicador.
 
@@ -49,6 +51,7 @@ Los filtros no cambian el plan. El plan lo fija siempre el tamaño elegido: filt
 * Nueva pestaña de comparación entre distritos, con la guía de subestaciones de junio de 2026, que cubre toda la concesión.
 * Los meses desde la última poda distinguen dos casos que antes se confundían. Un alimentador podado en el mismo mes del corte aparece como «podado este mes». Uno que no figura en el registro de poda, que empieza en enero de 2025, aparece como «sin poda registrada»; antes este segundo caso se mostraba como 24 meses, que es solo el tope que usa el cálculo. El detalle está en pipeline/README.md.
 * Los datos se actualizan con un pipeline automático, y las fechas que muestra la página salen de los propios datos.
+* Documento de sugerencias de Pluz de la reunión N°3, atendido punto por punto: interrupciones por vegetación y no ubicadas en la etiqueta y los indicadores, indicadores del elemento buscado, vista satelital y acercamiento, detalle antes de la curva, base de postes de media tensión, cifras de la comparación sin doble conteo y sin decimales, con mantenimientos por vegetación y un color por distrito, y subestaciones y postes en los mapas de la comparación. El estado de cada pedido está en docs/FEEDBACK_REUNION3.md.
 
 
 ## Modelo y benchmark
@@ -78,6 +81,7 @@ python pipeline/actualizar.py ver
 Algunos parámetros en la dirección sirven para compartir una vista concreta o para capturarla en un informe:
 
 * **tema=claro** o **tema=oscuro** fija el tema.
+* **fondo=satelital** abre el mapa del piloto con el fondo satelital.
 * **nivel=subestaciones** abre directamente la vista por subestación.
 * **vista=comparar** abre la comparación de distritos.
 * **distrito=SJL** elige el distrito de la comparación. Los códigos son SJL, CAR, CLL, PPI, SMP, VEN y COM.
@@ -115,6 +119,7 @@ No hace falta ningún paso de compilación ni ningún servidor de aplicaciones. 
 * **css/estilos.css.** Estilos y paleta, con tema claro y oscuro.
 * **js/app.js.** Lógica del mapa, la curva, la lista y las fichas del piloto.
 * **js/comparar.js.** Pestaña de comparación entre distritos.
+* **js/teselas.js.** Fondo satelital de los mapas, con las teselas de Esri.
 * **js/vendor.** Biblioteca D3, versión 7.9.0.
 * **data.** Lo que carga la página: criticidad del piloto, datos de los ocho distritos y geografía. Cada archivo va en dos copias con el mismo contenido: la de extensión js la carga la página, y la de extensión json sirve para reutilizar los datos.
 * **assets.** Logotipo completo, isotipo e icono de pestaña.
@@ -123,6 +128,9 @@ No hace falta ningún paso de compilación ni ningún servidor de aplicaciones. 
 * **ARQUITECTURA.md.** Propuestas para la operación, en las instalaciones de Pluz y en AWS.
 * **docs/PRUEBA_DE_USUARIO.md.** Recorrido de la herramienta en el papel de un usuario de Pluz sin formación técnica: lo fuerte y las mejoras por prioridad. Las mejoras rápidas ya están aplicadas.
 * **docs/Presentacion_Cambios_Reunion3_Semana_11.pptx.** Presentación del modelo de contraste, la prueba de usuario y las mejoras aplicadas.
+* **docs/FEEDBACK_REUNION3.md.** Todo lo que pidieron Pluz y el asesor desde la reunión N°3, con su estado.
+* **docs/Informe_Respuesta_Reunion3_Pluz.docx.** Informe para Pluz: las sugerencias atendidas, el modelo y sus variables, dónde acierta y dónde se equivoca, y los datos que hacen falta para escalar.
+* **papers.** Literatura que respalda cada decisión del método, en papers/README.md. Los PDF se quedan en el equipo.
 * **benchmark.** Reporte interactivo del benchmark de modelos, publicado como segundo enlace. Lo reescribe la orden benchmark del pipeline.
 
 
