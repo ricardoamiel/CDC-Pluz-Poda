@@ -1,0 +1,319 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\geometry{papersize={200mm,112.5mm}}
+\usepackage{fontspec}
+\IfFontExistsTF{Arial}{\setsansfont{Arial}}{\setsansfont{Liberation Sans}}
+\usepackage[spanish,es-noshorthands,es-nodecimaldot]{babel}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage[most]{tcolorbox}
+
+\definecolor{azul}{HTML}{395AA1}
+\definecolor{azulcl}{HTML}{E8EEF8}
+\definecolor{azulos}{HTML}{1D2F55}
+\definecolor{verde}{HTML}{6CAC5E}
+\definecolor{amarillo}{HTML}{FCC13F}
+\definecolor{gris}{HTML}{4E5A6E}
+\definecolor{negro}{HTML}{131A26}
+\definecolor{hueso}{HTML}{F6F8FC}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamercolor{normal text}{fg=negro}
+\setbeamercolor{frametitle}{fg=negro}
+\setbeamercolor{framesubtitle}{fg=gris}
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+\setbeamerfont{framesubtitle}{size=\small,series=\mdseries}
+\setbeamertemplate{itemize item}{\color{negro}\textbullet}
+\setbeamertemplate{headline}{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[azul] (current page.north west) rectangle ([xshift=0.62\paperwidth,yshift=-1.6mm]current page.north west);
+    \fill[amarillo] ([xshift=0.62\paperwidth]current page.north west) rectangle ([xshift=0.81\paperwidth,yshift=-1.6mm]current page.north west);
+    \fill[verde] ([xshift=0.81\paperwidth]current page.north west) rectangle ([yshift=-1.6mm]current page.north east);
+  \end{tikzpicture}}
+\setbeamertemplate{footline}{\hfill{\color{gris}\scriptsize\insertframenumber}\hspace{6mm}\vspace{3mm}}
+\setbeamertemplate{frametitle}{\vspace{3mm}{\usebeamerfont{frametitle}\insertframetitle}\par
+  \ifx\insertframesubtitle\empty\else{\usebeamerfont{framesubtitle}\usebeamercolor[fg]{framesubtitle}\insertframesubtitle}\par\fi}
+
+\newtcolorbox{nota}{colback=azulcl,colframe=azulcl,arc=2mm,halign=center,valign=center,
+  fontupper=\small\bfseries\color{azulos},left=2mm,right=2mm,top=1mm,bottom=1mm}
+\newcommand{\punto}[1]{\tcbox[colback=azul,colframe=azul,arc=1mm,boxsep=0.5mm,left=3mm,right=3mm,
+  fontupper=\scriptsize\bfseries\color{white}]{#1}}
+\newcommand{\pedido}[3]{\begin{tcolorbox}[colback=hueso,colframe=azulcl,arc=1.5mm,height=9mm,valign=center,
+  left=1mm,top=0mm,bottom=0mm,sidebyside,lefthand width=9mm,sidebyside gap=2mm,
+  segmentation style={draw=none}]\centering\tcbox[colback=#3,colframe=#3,arc=1mm,boxsep=0.5mm,left=0.5mm,right=0.5mm,
+  fontupper=\small\bfseries\color{white}]{#1}\tcblower\footnotesize\bfseries #2\end{tcolorbox}}
+\newcommand{\cifra}[3]{\begin{tcolorbox}[colback=#3,colframe=#3,arc=2mm,height=30mm,valign=center,halign=center]
+  {\fontsize{28}{32}\selectfont\bfseries\color{azul}#1}\par\vspace{2mm}\small #2\end{tcolorbox}}
+\newcommand{\kpi}[2]{\begin{tcolorbox}[colback=azulcl,colframe=azulcl,arc=1.5mm,top=0.5mm,bottom=0.5mm]
+  {\Large\bfseries\color{azulos}#1}\par{\scriptsize\color{gris}#2}\end{tcolorbox}}
+\newcommand{\fila}[3]{\begin{tcolorbox}[colback=#3,colframe=#3,arc=1.5mm,top=0.5mm,bottom=0.5mm,left=2mm]
+  {\footnotesize\bfseries #1}\par{\tiny\color{gris}#2}\end{tcolorbox}}
+\newcommand{\imagen}[3]{\includegraphics[width=#2,height=#3,keepaspectratio]{#1}}
+
+\newcommand{\variable}[3]{\begin{tcolorbox}[colback=hueso,colframe=azulcl,arc=1.5mm,height=10mm,valign=center,
+  left=1.5mm,top=0mm,bottom=0mm,sidebyside,lefthand ratio=0.62,sidebyside gap=2mm,segmentation style={draw=none}]
+  {\footnotesize\bfseries #1}\par{\tiny\color{gris}#2}\tcblower\centering\tcbox[colback=azulcl,colframe=azulcl,arc=1mm,
+  fontupper=\normalsize\bfseries\color{azulos}]{× #3}\end{tcolorbox}}
+\AtBeginDocument{\raggedright}
+\hyphenpenalty=10000\exhyphenpenalty=10000
+\begin{document}
+
+% 1. Portada
+\begin{frame}[plain]
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[azul] (current page.north west) rectangle ([xshift=0.62\paperwidth,yshift=-2.4mm]current page.north west);
+    \fill[amarillo] ([xshift=0.62\paperwidth]current page.north west) rectangle ([xshift=0.81\paperwidth,yshift=-2.4mm]current page.north west);
+    \fill[verde] ([xshift=0.81\paperwidth]current page.north west) rectangle ([yshift=-2.4mm]current page.north east);
+  \end{tikzpicture}
+  \vspace{4mm}
+  \includegraphics[height=12mm]{/home/germain/Documentos/Python_Projects/CDC/Entregable_3/viz/assets/pluz-logo.png}\par\vspace{8mm}
+  {\fontsize{28}{32}\selectfont\bfseries Respuesta a las sugerencias de Pluz}\par\vspace{3mm}
+  {\large\color{gris}Cambios de la semana 11, tras el documento de la reunión N°3}\par\vspace{10mm}
+  {\bfseries\color{azulos}DS5045 Ciencia de Datos Computacionales · Pluz Energía y UTEC · Grupo 2}\par\vspace{3mm}
+  {\small\color{gris}Herramienta: ricardoamiel.github.io/CDC-Pluz-Poda\par Reporte del modelo: ricardoamiel.github.io/CDC-Pluz-Poda/benchmark\par Octubre de 2026}
+\end{frame}
+
+% 2. Resumen
+\begin{frame}{Ocho sugerencias y dos recomendaciones: todas atendidas}{Cada una se ve en la herramienta o en el proceso semanal de datos}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \pedido{1}{Interrupciones solo por vegetación y no ubicadas en la etiqueta}{azul}
+      \pedido{3}{Llegar a la calle: acercar y vista satelital}{azul}
+      \pedido{5}{Base de postes de media tensión}{azul}
+      \pedido{7}{Ajustes en Comparar distritos}{azul}
+      \pedido{R1}{Sustento de la metodología en la literatura}{verde}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \pedido{2}{Indicadores del elemento buscado}{azul}
+      \pedido{4}{Detalle antes de la curva y nombre ejecutivo}{azul}
+      \pedido{6}{Vegetación más no ubicadas agrupadas}{azul}
+      \pedido{8}{Subestaciones y postes en los mapas de la comparación}{azul}
+      \pedido{R2}{Estructura y calidad de los datos para escalar}{verde}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 3. Puntos 1 y 2
+\begin{frame}{Puntos 1 y 2: la etiqueta y los indicadores dicen lo que importa}{Interrupciones por vegetación y no ubicadas, y cifras del elemento que se busca}
+  \begin{columns}[T]
+    \begin{column}{0.36\textwidth}\centering\imagen{/home/germain/Documentos/Python_Projects/CDC/Entregable_3/presentacion_cambios/capturas/s12/tooltip_vegetacion.png}{\linewidth}{7.5cm}\end{column}
+    \begin{column}{0.6\textwidth}\footnotesize
+      \punto{Punto 1}
+      \begin{itemize}
+        \item \textbf{Antes:} la etiqueta mostraba las interrupciones por todas las causas.
+        \item \textbf{Ahora:} la etiqueta, el cuarto indicador y el detalle muestran las interrupciones por vegetación y no ubicadas del último año.
+        \item \textbf{En el detalle:} se separan las de árbol (crecimiento o tala) de las no ubicadas, y aparte las de todas las causas.
+      \end{itemize}
+      \punto{Punto 2}
+      \begin{itemize}
+        \item \textbf{Al buscar} una subestación, un alimentador, una dirección o un poste, los cuatro indicadores describen solo lo encontrado: puesto, clientes, SAIDI e interrupciones por vegetación.
+        \item \textbf{Las tarjetas se marcan en azul} mientras hay búsqueda; al borrarla vuelven a describir el plan.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 4. Punto 3
+\begin{frame}{Punto 3: del mapa a la calle}{Búsqueda de la subestación 02379A con el fondo satelital}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}\centering\imagen{/home/germain/Documentos/Python_Projects/CDC/Entregable_3/presentacion_cambios/capturas/s12/busqueda_satelital.png}{\linewidth}{9.0cm}\end{column}
+    \begin{column}{0.45\textwidth}\small
+      \punto{Punto 3}
+      \begin{itemize}
+        \item \textbf{Acercar:} con los botones, con Ctrl y la rueda del ratón o con dos dedos en el teléfono.
+        \item \textbf{Dos fondos:} el coroplético de siempre y uno satelital con las vías y sus nombres (imágenes de Esri).
+        \item \textbf{Búsqueda:} el mapa va directo a la calle de la unidad y los indicadores pasan a esa unidad.
+        \item \textbf{Para la cuadrilla:} el detalle trae la coordenada y los botones Ver en el mapa y Ver calles en vista satelital; el plan descargado trae latitud y longitud.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 5. Punto 4
+\begin{frame}{Punto 4: primero el detalle, después la curva}{El detalle da el contexto para leer la curva, que ahora se llama Escenario de ampliación del plan}
+  \punto{Punto 4}\par
+  \centering\imagen{/home/germain/Documentos/Python_Projects/CDC/Entregable_3/presentacion_cambios/capturas/s12/detalle_ubicacion.png}{\linewidth}{6.8cm}\par\vspace{2mm}
+  \begin{nota}Ficha, composición del índice, razones del puesto y ubicación en una sola vista, antes de la curva.\end{nota}
+\end{frame}
+
+% 6. Punto 5
+\begin{frame}{Punto 5: la base de postes de media tensión}{49.563 postes en la concesión, 1.090 en Los Olivos, cargados como una fuente más del proceso semanal}
+  \begin{columns}[T]
+    \begin{column}{0.38\textwidth}\centering\imagen{/home/germain/Documentos/Python_Projects/CDC/Entregable_3/presentacion_cambios/capturas/s12/postes_satelital.png}{\linewidth}{9.0cm}\end{column}
+    \begin{column}{0.59\textwidth}\footnotesize
+      \punto{Punto 5}
+      \begin{itemize}
+        \item \textbf{Ubicación:} la base no trae alimentador ni subestación; cada poste se asigna a la subestación aérea más cercana dentro de 400 m.
+        \item \textbf{En el mapa:} los postes aparecen al acercar, los de la unidad elegida se resaltan en amarillo y el buscador encuentra un poste por su código.
+      \end{itemize}
+      {\normalsize\bfseries\color{azul}¿Mejoran el modelo? Se probó y no}
+      \begin{itemize}
+        \item \textbf{La mejora no se distingue del azar:} PR AUC de 0,401 a 0,416, con un intervalo de menos 0,017 a más 0,036.
+        \item \textbf{Detecta menos con la capacidad actual:} 82,8 \% baja a 80,7 \% con 270 alertas por mes.
+        \item \textbf{Repite lo que ya está en el índice:} correlación de 0,78 a 0,85 con clientes y potencia.
+        \item \textbf{Por eso} los postes sirven para ubicar, no para predecir.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 7. Punto 6
+\begin{frame}{Punto 6: vegetación más no ubicadas, confirmado en los datos}{Eventos que el piloto agrupa como probables de vegetación, enero de 2024 a agosto de 2026}
+  \punto{Punto 6}\par\vspace{1mm}
+  \begin{columns}[T]
+    \begin{column}{0.23\textwidth}\cifra{165}{Crecimiento de árbol}{azulcl}\end{column}
+    \begin{column}{0.23\textwidth}\cifra{53}{Tala de árbol}{azulcl}\end{column}
+    \begin{column}{0.23\textwidth}\cifra{1.110}{No ubicadas en red aérea}{azulcl}\end{column}
+    \begin{column}{0.23\textwidth}\cifra{\color{gris}6}{\footnotesize No ubicadas en cabecera o subestación convencional: quedan fuera}{hueso}\end{column}
+  \end{columns}
+  \vspace{2mm}\small
+  \begin{itemize}
+    \item \textbf{Por qué se suman las no ubicadas:} el diccionario de causas de Pluz las define como fallas que no se encontraron en la inspección, compatibles con un contacto transitorio con ramas.
+    \item \textbf{Por qué se excluyen esas 6:} en cabecera o en subestación convencional no hay árboles.
+  \end{itemize}
+  \begin{nota}Lo que el modelo predice: al menos un corte por vegetación o no ubicado en red aérea en los próximos 3 meses.\end{nota}
+\end{frame}
+
+% 8. Punto 7
+\begin{frame}{Punto 7: Comparar distritos, sin dobles conteos y con cifras claras}{Los Olivos frente a San Juan de Lurigancho}
+  \punto{Punto 7}\par
+  \centering\imagen{/home/germain/Documentos/Python_Projects/CDC/Entregable_3/presentacion_cambios/capturas/s12/comparar_cifras.png}{\linewidth}{4.5cm}\par
+  \raggedright\footnotesize
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item \textbf{Alimentadores compartidos:} cada uno aporta a cada distrito solo la parte de sus subestaciones en él; ningún evento se cuenta dos veces.
+        \item \textbf{Nueva fila:} cantidad de mantenimientos por vegetación, con las podas del último año. Va aparte de los cortes porque una cuenta podas y la otra, cortes.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item \textbf{Sin decimales} en las cifras por cada 100 subestaciones ni en la aproximación de cuánta vegetación hay.
+        \item \textbf{Un color por distrito:} azul para Los Olivos y verde para el comparado, con su leyenda.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 9. Punto 8
+\begin{frame}{Punto 8: subestaciones y postes en los dos mapas}{Mismo selector de fondo que el piloto; al acercar aparecen las subestaciones aéreas y los postes}
+  \punto{Punto 8}\par
+  \centering\imagen{/home/germain/Documentos/Python_Projects/CDC/Entregable_3/presentacion_cambios/capturas/s12/comparar_satelital.png}{\linewidth}{8.2cm}
+\end{frame}
+
+% 10. Cómo funciona el modelo
+\begin{frame}{Cómo funciona el modelo}{Probabilidad de al menos un corte por vegetación o no ubicado en los próximos 3 meses, por alimentador}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      {\bfseries\color{azul}Cinco variables; ninguna es del índice}\hfill{\tiny\bfseries\color{gris}Riesgo por salto típico}\par\vspace{1mm}
+      \variable{Interrupciones del último año}{Todas las causas; Pluz pidió incluirla}{1,91}
+      \variable{Historial de vegetación}{Eventos desde enero de 2024}{1,32}
+      \variable{Vegetación del último año}{Exposición reciente}{1,13}
+      \variable{Estacionalidad}{Mes del año; pesa muy poco}{1,00 a 1,04}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      {\bfseries\color{azul}Del modelo al índice de criticidad}\par\vspace{1mm}
+      \pedido{0,40}{Probabilidad del modelo}{azul}
+      \pedido{0,20}{Tiempo sin poda}{amarillo}
+      \pedido{0,20}{SAIDI del último año}{verde}
+      \pedido{0,20}{Exposición: clientes y potencia}{gris}
+      \scriptsize
+      \begin{itemize}
+        \item \textbf{Percentil dentro del distrito:} 100 es la unidad más urgente.
+        \item \textbf{Capacidad:} 10 alimentadores o 76 subestaciones al mes en Los Olivos.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \begin{nota}Más historial o más interrupciones dan siempre más riesgo, nunca menos; y cuando el modelo dice 30 \%, ocurren cerca de 30 de cada 100.\end{nota}
+  \centering{\scriptsize\color{gris}Regresión logística: PR AUC 0,401, empatada con Random Forest; ningún modelo de los siete la supera de forma distinguible.}
+\end{frame}
+
+% 11. Dónde acierta
+\begin{frame}{Dónde acierta el modelo: alimentadores con historial sostenido}{Prueba de enero a mayo de 2026, que el modelo no vio, con 270 alertas por mes en unos 514 alimentadores}
+  \begin{columns}[T]
+    \begin{column}{0.62\textwidth}\centering\imagen{/home/germain/Documentos/Python_Projects/CDC/Entregable_3/presentacion_cambios/capturas/s12/precision_por_historial.pdf}{\linewidth}{6.5cm}\end{column}
+    \begin{column}{0.35\textwidth}
+      \kpi{360}{aciertos}\kpi{990}{falsas alarmas}\kpi{75}{cortes no previstos}
+      \scriptsize
+      \begin{itemize}
+        \item \textbf{27 de cada 100 alertas} terminan en corte; al azar serían 17.
+        \item \textbf{Detecta el 82,8 \%} de los cortes.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \begin{nota}La precisión va de 9 \% sin historial a 56 \% con más de diez eventos; 19 alimentadores acertaron los cinco meses.\end{nota}
+  \centering{\scriptsize\color{gris}Un corte no previsto cuesta más que una poda adelantada: la falsa alarma es, en la práctica, poda preventiva sobre alimentadores que el historial ya señala.}
+\end{frame}
+
+% 12. Dónde se equivoca
+\begin{frame}{Dónde se equivoca, y cómo le fue en Los Olivos}{Piloto: 75 alertas en cinco meses, 20 aciertos, 55 falsas alarmas y 5 cortes no previstos}
+  \begin{columns}[T]
+    \begin{column}{0.45\textwidth}\centering\imagen{/home/germain/Documentos/Python_Projects/CDC/Entregable_3/presentacion_cambios/capturas/s12/aciertos_los_olivos.pdf}{\linewidth}{7.0cm}\end{column}
+    \begin{column}{0.52\textwidth}\footnotesize
+      \begin{itemize}
+        \item \textbf{Falsas alarmas por otras causas:} sin vegetación en el último año las alertas aciertan 15 \%, frente a 30 \% con vegetación reciente. Son alimentadores con muchas interrupciones de otras causas.
+        \item \textbf{Podas que funcionaron:} parte de las falsas alarmas puede ser un riesgo evitado; hoy no se separa porque la poda no dice si fue preventiva o correctiva.
+        \item \textbf{El primer corte:} el 85 \% de los no previstos ocurrió sin vegetación en el año anterior y el 49 \% sin ningún evento desde 2024. Es el punto ciego de cualquier modelo basado en historial.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \begin{nota}Cómo usarlo: alerta con historial, poda con confianza; alerta sin vegetación reciente, inspección antes de mover la cuadrilla.\end{nota}
+\end{frame}
+
+% 13. Recomendación 1
+\begin{frame}{Recomendación 1: cada decisión tiene sustento en la literatura}{Lista completa en la carpeta papers del repositorio y en la última sección del reporte del modelo}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \fila{\normalsize\color{azulos}Predecir por alimentador con el historial}{\footnotesize\color{negro}Doostan, Sohrabi y Chowdhury (2019); Melagoda y otros (2021)}{hueso}
+      \fila{\normalsize\color{azulos}Riesgo con capacidad fija}{\footnotesize\color{negro}Dokic y Kezunovic (2019); Arunraj y Maiti (2007); Correa Tamayo y otros (2019)}{hueso}
+      \fila{\normalsize\color{azulos}SAIDI}{\footnotesize\color{negro}Guía IEEE 1366; Norma Técnica de Calidad de los Servicios Eléctricos}{hueso}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \fila{\normalsize\color{azulos}Tiempo sin poda}{\footnotesize\color{negro}Guikema, Davidson y Liu (2006); Pan (2021)}{hueso}
+      \fila{\normalsize\color{azulos}Percentiles y pesos}{\footnotesize\color{negro}Manual de indicadores compuestos de la OCDE y el JRC (2008)}{hueso}
+      \fila{\normalsize\color{azulos}Evaluación del modelo}{\footnotesize\color{negro}Saito y Rehmsmeier (2015); Cerqueira, Torgo y Mozetič (2020); Niculescu Mizil y Caruana (2005)}{hueso}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 14. Recomendación 2
+\begin{frame}{Recomendación 2: estructura y calidad de los datos para escalar}{El proceso semanal valida cada entrega contra un contrato de datos y se detiene si falta algo}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+      \fila{\color{azulos}Interrupciones diarias}{\scriptsize\color{negro}Fuente principal. Buena calidad; la causa no ubicada es ambigua y el punto de falla no registra el poste.}{azulcl}
+      \fila{\color{azulos}Registro de poda}{\scriptsize\color{negro}El 84 \% trae la subestación en el circuito. Incompleto fuera de Los Olivos.}{azulcl}
+      \fila{\color{azulos}Ranking de SAIDI}{\scriptsize\color{negro}SAIDI del último año por alimentador. Buena calidad.}{azulcl}
+      \fila{\color{azulos}Guía de subestaciones}{\scriptsize\color{negro}Alimentador, coordenadas, clientes, potencia y tipo de construcción. Base del mapa.}{azulcl}
+      \fila{\color{azulos}Postes de media tensión}{\scriptsize\color{negro}Código, coordenadas y distrito, sin alimentador ni subestación.}{azulcl}
+    \end{column}
+    \begin{column}{0.38\textwidth}\small
+      {\bfseries\color{azul}Para acordar con Pluz}
+      \begin{itemize}
+        \item \textbf{Poste o tramo de cada interrupción,} para bajar del alimentador al tramo.
+        \item \textbf{Subestación y tipo de cada poda,} preventiva o correctiva.
+        \item \textbf{Inventario de vegetación,} aunque sea por muestreo, para anticipar el primer corte.
+        \item \textbf{Mismos nombres de columnas} entre entregas, o aviso de los cambios.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% 15. Cierre
+\begin{frame}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      {\fontsize{26}{30}\selectfont\bfseries Pruebe la herramienta}\par\vspace{2mm}
+      {\large\color{gris}Escanee el código o abra el enlace}\par\vspace{4mm}
+      \begin{nota}https://ricardoamiel.github.io/CDC-Pluz-Poda\end{nota}\vspace{2mm}
+      {\large\bfseries\color{azul}Lo que sigue}\par\small
+      \begin{itemize}
+        \item \textbf{Medir el avance:} marcar en la herramienta lo ya podado, preventivo o correctivo.
+        \item \textbf{Medir el acierto:} seguimiento de cada plan tres meses después.
+        \item \textbf{Bajar de nivel:} reloj de poda por subestación y vínculo entre interrupción y tramo.
+      \end{itemize}\vspace{3mm}
+      \includegraphics[height=9mm]{/home/germain/Documentos/Python_Projects/CDC/Entregable_3/viz/assets/pluz-logo.png}
+    \end{column}
+    \begin{column}{0.4\textwidth}\centering\vspace{6mm}\fbox{\includegraphics[width=0.9\linewidth]{/home/germain/Documentos/Ciclo 10/CDC/entregables_3/qrcode_409777093_3a34ffe28abd7d4b761a091339debe8a.png}}\end{column}
+  \end{columns}
+\end{frame}
+
+\end{document}
