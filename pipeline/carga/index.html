@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carga semanal Pluz</title>
+<meta name="theme-color" content="#395aa1">
+<link rel="icon" href="/assets/favicon.png" type="image/png">
+<!-- La misma hoja de estilos de la herramienta: paleta del logotipo, cabecera y paneles. -->
+<link rel="stylesheet" href="/css/estilos.css">
+<style>
+  .viz-root { padding: 20px 16px 40px; }
+  .vista { max-width: 1440px; margin: 0 auto; display: grid; gap: 16px; }
+  .vista[hidden] { display: none; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+  .kpi { background: var(--superficie-2); border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra); padding: 12px 16px; position: relative; overflow: hidden; }
+  .kpi::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--k, var(--pluz-azul)); }
+  .kpi small { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-3); font-weight: 600; }
+  .kpi b { font-size: 22px; color: var(--tinta); }
+  .kpi span { display: block; font-size: 12px; color: var(--tinta-2); }
+  .zona { display: block; border: 2px dashed var(--borde-fuerte); border-radius: var(--radio); padding: 34px 18px; text-align: center; cursor: pointer; background: var(--azul-050); color: var(--tinta-2); font-size: 14px; transition: .15s; }
+  .zona strong { color: var(--azul-600); }
+  .zona.sobre { border-color: var(--pluz-azul); background: var(--azul-100); }
+  .estado-carga { font-size: 13px; color: var(--tinta-2); margin: 12px 0 0; }
+  .estado-carga .ok { color: var(--ok); font-weight: 700; } .estado-carga .er { color: var(--critico); font-weight: 700; }
+  .rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; }
+  @media (max-width: 420px) { .dos { grid-template-columns: 1fr; } }
+  .mini { border: 1px solid var(--borde); border-radius: var(--radio-s); padding: 10px 12px; background: var(--superficie-2); }
+  .mini h3 { font-size: 12px; margin: 0 0 6px; color: var(--tinta-2); }
+  .mini p { font-size: 11px; color: var(--tinta-3); margin: 4px 0 0; }
+  .mini svg, .grafico svg { width: 100%; height: auto; display: block; }
+  .acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  pre.log { font-size: 11px; background: var(--superficie-3); border: 1px solid var(--borde); border-radius: var(--radio-s); padding: 12px; max-height: 280px; overflow: auto; white-space: pre-wrap; color: var(--tinta-2); }
+  .eje { font-size: 10px; fill: var(--tinta-3); font-family: inherit; }
+  .valor { font-size: 10px; fill: var(--tinta-2); font-weight: 600; font-family: inherit; }
+  .leyenda { display: flex; gap: 14px; font-size: 12px; color: var(--tinta-2); margin-top: 6px; flex-wrap: wrap; }
+  .leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .nota { font-size: 12.5px; color: var(--tinta-2); margin: 6px 0 0; }
+  .lit h3 { font-size: 14px; margin: 18px 0 8px; color: var(--azul-700); }
+  .lit h3:first-child { margin-top: 0; }
+  .lit ul { margin: 0; padding-left: 18px; }
+  .lit li { font-size: 13px; color: var(--tinta-2); margin-bottom: 8px; line-height: 1.45; }
+  .lit li b { color: var(--tinta); }
+  .lit a { color: var(--azul-600); font-weight: 600; text-decoration: none; font-size: 12px; margin-left: 4px; }
+  .lit a:hover { text-decoration: underline; }
+  .lotes { display: flex; gap: 6px; flex-wrap: wrap; }
+  .lotes .sello { font-size: 11.5px; }
+  .lotes .sello.nuevo { background: var(--ok-suave); color: var(--ok); }
+</style>
+</head>
+<body>
+<div class="viz-root">
+
+  <header class="cabecera">
+    <div class="marca">
+      <img class="marca-logo" src="/assets/pluz-logo.png" alt="Pluz Energía" width="491" height="250">
+      <span class="marca-barra" aria-hidden="true"></span>
+      <div class="marca-texto">
+        <p class="sobretitulo">Subgerencia MT&nbsp;/&nbsp;BT · Gestión de vegetación en red aérea</p>
+        <h1>Carga semanal de datos</h1>
+        <p class="subtitulo">Corte vigente <strong id="corte">-</strong> · ventana de <strong id="ventana">-</strong></p>
+      </div>
+    </div>
+    <div class="cabecera-acciones">
+      <span class="sello" id="sello">Última corrida -</span>
+      <a class="boton boton-principal" href="/web/" target="_blank" style="text-decoration:none">Abrir la herramienta</a>
+    </div>
+  </header>
+
+  <nav class="pestanas" role="tablist">
+    <button type="button" role="tab" data-vista="cargar" class="activa" aria-selected="true">Cargar semana</button>
+    <button type="button" role="tab" data-vista="modelo" aria-selected="false">Modelo y MLflow</button>
+    <button type="button" role="tab" data-vista="literatura" aria-selected="false">Literatura</button>
+  </nav>
+
+  <!-- ===================================================== cargar -->
+  <section class="vista" id="vista-cargar">
+    <div class="kpis" id="kpis"></div>
+
+    <div class="panel">
+      <div class="panel-cabecera"><h2>1. Subir el archivo de la semana</h2>
+        <p class="nota">Interrupciones diarias (hoja Falla_Alim), poda en formato unificado, guía de subestaciones o ranking SAIDI, en .xlsx o .csv. Se revisa contra el contrato de datos antes de guardar nada.</p></div>
+      <label class="zona" id="zona"><strong>Arrastre el archivo aquí</strong> o haga clic para elegirlo
+        <input type="file" id="archivo" accept=".xlsx,.xls,.csv" hidden>
+      </label>
+      <p class="estado-carga" id="info"></p>
+    </div>
+
+    <div class="panel" id="panel-nuevo" hidden>
+      <div class="panel-cabecera"><h2>2. Lo que trae el archivo</h2><p class="nota" id="nota-nuevo"></p></div>
+      <div class="rejilla" id="graficos"></div>
+      <div class="acciones">
+        <button class="boton boton-principal" id="actualizar" type="button">Actualizar la web</button>
+        <button class="boton" id="descartar" type="button">Descartar</button>
+      </div>
+      <pre class="log" id="log" hidden></pre>
+    </div>
+
+    <div class="dos">
+      <div class="panel"><div class="panel-cabecera"><h2>Fuentes usadas en la última corrida</h2><p class="nota">Filas que entraron al modelo por fuente.</p></div><div class="grafico" id="g-fuentes"></div></div>
+      <div class="panel"><div class="panel-cabecera"><h2>Lotes recibidos</h2><p class="nota">Cada lote es una carpeta; el más reciente manda sobre su periodo.</p></div><div class="lotes" id="lotes"></div></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== modelo -->
+  <section class="vista" id="vista-modelo" hidden>
+    <div class="dos">
+      <div class="panel"><div class="panel-cabecera"><h2>Benchmark de modelos</h2><p class="nota">Precisión promedio fuera de muestra (PR AUC). En amarillo, la regla por historial que el modelo tiene que igualar o superar.</p></div><div class="grafico" id="g-bench"></div></div>
+      <div class="panel"><div class="panel-cabecera"><h2>Validación en cada corrida</h2><p class="nota">Cobertura de eventos con el 40&nbsp;% de alimentadores priorizados, modelo frente a regla. Registrado en MLflow, experimento pluz_modelo_vigente.</p></div><div class="grafico" id="g-hist"></div>
+        <div class="leyenda"><span><i style="background:var(--pluz-azul)"></i>Modelo</span><span><i style="background:var(--pluz-amarillo)"></i>Regla por historial</span></div></div>
+    </div>
+    <div class="dos">
+      <div class="panel"><div class="panel-cabecera"><h2>Cobertura por tamaño de lista</h2><p class="nota">Porcentaje de eventos de la prueba que caen en la lista priorizada.</p></div><div class="grafico" id="g-cob"></div>
+        <div class="leyenda"><span><i style="background:var(--pluz-azul)"></i>Modelo</span><span><i style="background:var(--pluz-amarillo)"></i>Regla por historial</span></div></div>
+      <div class="panel"><div class="panel-cabecera"><h2>Monitoreo del modelo vigente</h2></div><p class="nota" id="monitoreo"></p></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== literatura -->
+  <section class="vista" id="vista-literatura" hidden>
+    <div class="panel lit"><div class="panel-cabecera"><h2>Literatura que respalda el método</h2><p class="nota">Cada decisión del proyecto con la fuente que la sustenta (papers/README.md).</p></div><div id="lit"></div></div>
+  </section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.querySelector(".viz-root")).getPropertyValue(n).trim();
+const pct = v => v == null ? "-" : (v * 100).toFixed(1).replace(".", ",") + " %";
+const num = v => { const [e, d] = String(Math.round(Number(v) * 100) / 100).split("."); return e.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + (d ? "," + d : ""); };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let lote = null;
+
+// Pestañas
+document.querySelectorAll(".pestanas button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".pestanas button").forEach(x => { x.classList.toggle("activa", x === b); x.setAttribute("aria-selected", x === b); });
+  document.querySelectorAll(".vista").forEach(v => v.hidden = v.id !== "vista-" + b.dataset.vista);
+});
+
+// Barras verticales chicas
+function mini(g, color) {
+  const W = 230, H = 90, n = g.valores.length, max = Math.max(...g.valores, 1), bw = W / Math.max(n, 1);
+  const barras = g.valores.map((v, i) => { const h = (v / max) * (H - 6);
+    return `<rect x="${i*bw+1}" y="${H-h}" width="${Math.max(bw-2,1)}" height="${h}" rx="2" fill="${color}"><title>${esc(g.etiquetas[i])}: ${num(v)}</title></rect>`; }).join("");
+  const total = g.valores.reduce((a, b) => a + b, 0);
+  return `<div class="mini"><h3>${esc(g.titulo)}</h3><svg viewBox="0 0 ${W} ${H}">${barras}</svg>
+    <p>${esc(g.etiquetas[0] ?? "")} … ${esc(g.etiquetas[n-1] ?? "")} · total ${num(Math.round(total*100)/100)}</p></div>`;
+}
+
+// Barras horizontales con etiqueta
+function barrasH(items, destacar) {
+  const W = 460, fila = 24, izq = 170, H = items.length * fila + 4, max = Math.max(...items.map(i => i.v), 1e-9);
+  return `<svg viewBox="0 0 ${W} ${H}">` + items.map((it, k) => { const w = (it.v / max) * (W - izq - 60), y = k * fila + 2;
+    const col = destacar(it) || css("--pluz-azul");
+    return `<text class="eje" x="${izq-8}" y="${y+15}" text-anchor="end">${esc(it.e)}</text>
+      <rect x="${izq}" y="${y+3}" width="${w}" height="${fila-8}" rx="3" fill="${col}"><title>${esc(it.e)}: ${it.t}</title></rect>
+      <text class="valor" x="${izq+w+6}" y="${y+15}">${it.t}</text>`; }).join("") + "</svg>";
+}
+
+// Barras agrupadas modelo y regla
+function pares(etiquetas, a, b, fmt) {
+  const W = 460, H = 170, pie = 22, n = etiquetas.length, gw = W / n, max = Math.max(...a, ...b, 1e-9);
+  const azul = css("--pluz-azul"), amar = css("--pluz-amarillo");
+  return `<svg viewBox="0 0 ${W} ${H}"><line x1="0" x2="${W}" y1="${H-pie}" y2="${H-pie}" stroke="${css("--borde-fuerte")}"/>` +
+    etiquetas.map((e, i) => { const x = i * gw, bw = Math.min(26, gw * .3);
+      const h1 = a[i] / max * (H - pie - 18), h2 = b[i] / max * (H - pie - 18), c = x + gw / 2;
+      return `<rect x="${c-bw-4}" y="${H-pie-h1}" width="${bw}" height="${h1}" rx="2" fill="${azul}"><title>Modelo: ${fmt(a[i])}</title></rect>
+        <rect x="${c+4}" y="${H-pie-h2}" width="${bw}" height="${h2}" rx="2" fill="${amar}"><title>Regla: ${fmt(b[i])}</title></rect>
+        <text class="valor" x="${c-bw/2-4}" y="${H-pie-h1-4}" style="font-size:9px" text-anchor="middle">${fmt(a[i])}</text>
+        <text class="valor" x="${c+bw/2+4}" y="${H-pie-h2-4}" style="font-size:9px" text-anchor="middle">${fmt(b[i])}</text>
+        <text class="eje" x="${c}" y="${H-6}" text-anchor="middle">${esc(e)}</text>`; }).join("") + "</svg>";
+}
+
+function kpi(titulo, valor, detalle, color) {
+  return `<div class="kpi" style="--k:${color || "var(--pluz-azul)"}"><small>${titulo}</small><b>${valor}</b><span>${detalle || ""}</span></div>`;
+}
+
+async function cargarEstado(nuevo) {
+  const d = await (await fetch("/estado")).json();
+  if (d.error) { $("info").innerHTML = `<span class="er">${esc(d.error)}</span>`; return; }
+  const r = d.reporte || {}, v = r.validacion || {}, m = v.modelo || {}, g = v.regla || {}, f = d.fuentes || {};
+  $("corte").textContent = r.corte || "-"; $("ventana").textContent = r.ventana || "-";
+  $("sello").textContent = "Última corrida " + (r.fecha || "-");
+  const per = f.periodo_interrupciones || [];
+  $("kpis").innerHTML =
+    kpi("Interrupciones", f.interrupciones ? num(f.interrupciones.filas) : "-", per.length ? `del ${per[0]} al ${per[1]}` : "") +
+    kpi("Registros de poda", f.poda ? num(f.poda.filas) : "-", (f.periodo_poda || []).join(" al "), "var(--pluz-verde)") +
+    kpi("PR AUC modelo", m.ap != null ? m.ap.toFixed(3).replace(".", ",") : "-", "regla " + (g.ap != null ? g.ap.toFixed(3).replace(".", ",") : "-")) +
+    kpi("Cobertura con 40 %", pct(m.cobertura_40), "regla " + pct(g.cobertura_40), "var(--pluz-amarillo)") +
+    kpi("Publicado", r.publicado ? "Sí" : "No", (d.lotes || []).length + " lotes", r.publicado ? "var(--ok)" : "var(--critico)");
+
+  const fuentes = Object.entries(f).filter(([k, x]) => x && typeof x === "object" && "filas" in x && x.filas)
+    .map(([k, x]) => ({ e: k.replace(/_/g, " "), v: x.filas, t: num(x.filas) }));
+  $("g-fuentes").innerHTML = fuentes.length ? barrasH(fuentes, () => null) : "<p class='nota'>Sin corrida todavía.</p>";
+  $("lotes").innerHTML = (d.lotes || []).map(l => `<span class="sello ${l === nuevo ? "nuevo" : ""}">${esc(l)}</span>`).join("");
+
+  // MLflow
+  const bench = (d.mlflow.benchmark || []).map(x => ({ e: x.nombre, v: x.metricas.pr_auc, t: x.metricas.pr_auc.toFixed(3).replace(".", ",") }))
+    .sort((a, b) => b.v - a.v);
+  $("g-bench").innerHTML = bench.length ? barrasH(bench, it => /regla/i.test(it.e) ? css("--pluz-amarillo") : null) : "<p class='nota'>Sin benchmark registrado. Corra: python pipeline/actualizar.py benchmark</p>";
+  const hist = (d.mlflow.vigente || []).filter(x => "validacion_cobertura_40_modelo" in x.metricas).slice(-6);
+  $("g-hist").innerHTML = hist.length ? pares(hist.map(x => new Date(x.inicio).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit" })),
+    hist.map(x => x.metricas.validacion_cobertura_40_modelo), hist.map(x => x.metricas.validacion_cobertura_40_regla), pct) : "<p class='nota'>Sin corridas en MLflow.</p>";
+  $("g-cob").innerHTML = m.cobertura_20 != null ? pares(["20 %", "40 %", "80 %"], [m.cobertura_20, m.cobertura_40, m.cobertura_80], [g.cobertura_20, g.cobertura_40, g.cobertura_80], pct) : "";
+  const mo = r.monitoreo || {};
+  $("monitoreo").innerHTML = `${esc(mo.lectura || "Sin datos de monitoreo.")}<br><br>Meses nuevos monitoreados: <b>${mo.meses_nuevos ?? 0}</b> · Recalibrar: <b>${mo.recalibrar ? "sí" : "no"}</b> · Reentrenamiento recomendado: <b>${mo.reentrenamiento_recomendado ? "sí" : "no"}</b>`;
+
+  // Literatura
+  $("lit").innerHTML = (d.literatura || []).map(gr => `<h3>${esc(gr.decision)}</h3><ul>` +
+    gr.fuentes.map(s => `<li><b>${esc(s.autor)}.</b> ${esc(s.nota)}${s.pdf ? ` <a href="/papers/${encodeURIComponent(s.pdf)}" target="_blank">PDF</a>` : ""}</li>`).join("") + "</ul>").join("");
+}
+
+async function subir(f) {
+  $("info").textContent = `Revisando ${f.name}…`; $("panel-nuevo").hidden = true; $("log").hidden = true;
+  const r = await fetch("/subir", { method: "POST", headers: { "X-Nombre": encodeURIComponent(f.name) }, body: f });
+  const d = await r.json();
+  if (!r.ok) { $("info").innerHTML = `<span class="er">No se pudo cargar.</span> ${esc(d.error)}`; return; }
+  lote = d.lote;
+  $("info").innerHTML = `<span class="ok">Archivo válido.</span> Guardado en el lote <b>${esc(d.lote)}</b>.`;
+  $("nota-nuevo").innerHTML = `Fuente <b>${esc(d.fuente)}</b> · ${num(d.filas)} filas` + (d.desde ? ` · del ${d.desde} al ${d.hasta}` : "");
+  const colores = [css("--pluz-azul"), css("--pluz-amarillo"), css("--pluz-verde"), css("--comp-3")];
+  $("graficos").innerHTML = d.graficos.map((g, i) => mini(g, colores[i % 4])).join("");
+  $("panel-nuevo").hidden = false;
+  cargarEstado(lote);
+}
+
+$("archivo").onchange = e => e.target.files[0] && subir(e.target.files[0]);
+const z = $("zona");
+z.ondragover = e => { e.preventDefault(); z.classList.add("sobre"); };
+z.ondragleave = () => z.classList.remove("sobre");
+z.ondrop = e => { e.preventDefault(); z.classList.remove("sobre"); e.dataTransfer.files[0] && subir(e.dataTransfer.files[0]); };
+
+$("descartar").onclick = async () => {
+  await fetch("/descartar", { method: "POST", body: JSON.stringify({ lote }) });
+  $("info").textContent = "Lote descartado. No se cambió nada."; $("panel-nuevo").hidden = true; cargarEstado();
+};
+
+$("actualizar").onclick = async () => {
+  $("actualizar").disabled = $("descartar").disabled = true;
+  $("log").hidden = false; $("log").textContent = "Actualizando: valida, calcula el índice, registra en MLflow y publica…";
+  const d = await (await fetch("/actualizar", { method: "POST" })).json();
+  $("log").textContent = d.log;
+  $("actualizar").disabled = $("descartar").disabled = false;
+  if (d.ok) { $("info").innerHTML += ` <span class="ok">Web actualizada.</span>`; await cargarEstado(lote); window.open("/web/", "_blank"); }
+  else $("info").innerHTML += ` <span class="er">La actualización no publicó (código ${d.codigo}); revise el registro.</span>`;
+};
+
+cargarEstado();
+</script>
+</body>
+</html>

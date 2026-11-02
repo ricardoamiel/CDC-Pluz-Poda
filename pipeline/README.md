@@ -13,6 +13,29 @@ El recorrido completo es este:
 7. **Publicación.** La carpeta data se sube a GitHub y la página se actualiza sola.
 
 
+## Carga semanal desde el navegador
+
+La forma más corta de actualizar la herramienta con el archivo de la semana, sin abrir carpetas ni escribir órdenes:
+
+```
+python pipeline/cargar.py
+```
+
+Se abre http://127.0.0.1:8050/ en el navegador, con la misma paleta y logotipo de la herramienta. Tiene tres pestañas:
+
+* **Cargar semana.** Arrastrar el archivo de la semana (o hacer clic para elegirlo). Acepta .xlsx y .csv.
+  * Si es Excel, la fuente se reconoce por el nombre, con los mismos patrones de config.py: «Interrupciones diarias ....xlsx» (hoja Falla_Alim), «PODA ... FORMATO UNIFICADO.xlsx», «GUIA ....xlsx» o «Ranking ... SAIDI ....xlsx».
+  * Si es CSV, se reconoce por sus columnas (por ejemplo Referencia, Inicio, Alimentador, Causa, Localización, SAIDI y N° Clientes para las interrupciones) y se convierte al Excel que espera el contrato, con su nombre y su hoja.
+  * El archivo se valida y se guarda en un lote nuevo, pipeline/datos/lotes/AAAAMMDD_carga. Si no cumple el contrato, la página dice qué falta y el lote se borra.
+  * La página muestra en gráficos chicos lo que trae: registros por semana, SAIDI por semana y alimentadores con más registros.
+  * **Actualizar la web** corre la actualización completa (la misma que python pipeline/actualizar.py), muestra el registro y abre la herramienta actualizada en http://127.0.0.1:8050/web/. **Descartar** borra el lote sin tocar nada.
+  * Debajo: indicadores de la última corrida, filas por fuente y lotes recibidos.
+* **Modelo y MLflow.** Se carga al abrir la página, leyendo directo de pipeline/salidas/mlflow.db: benchmark de modelos (PR AUC, con la regla por historial en amarillo), cobertura del 40 % en cada corrida, cobertura por tamaño de lista y la lectura del monitoreo del modelo vigente.
+* **Literatura.** Las fuentes de papers/README.md agrupadas por la decisión del proyecto que respaldan, con enlace al PDF cuando está en el equipo.
+
+Publicar en GitHub sigue siendo un paso aparte y con confirmación: python pipeline/actualizar.py subir. Para probar sin tocar los datos reales, correr la página en modo demostración: PLUZ_DEMO=pipeline/datos/demo python pipeline/cargar.py.
+
+
 ## La rutina semanal
 
 La guía completa de instalación y operación, con la tarea programada, la opción manual y la demostración con datos reales, está en docs/GUIA_PROPUESTA_1.md. Aquí va el resumen.
