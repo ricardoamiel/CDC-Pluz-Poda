@@ -58,6 +58,7 @@
   .deshacer { border-left: 4px solid var(--pluz-amarillo); }
   .confirmar { margin-top: 12px; padding: 14px 16px; border-radius: var(--radio-s); background: var(--superficie-3); border: 1px solid var(--critico); border-left-width: 4px; }
   .confirmar p { margin: 0 0 10px; font-size: 13px; color: var(--tinta); line-height: 1.5; }
+  .confirmar.suave { border-color: var(--borde-fuerte); }
   .boton-peligro { background: #b3261e; border-color: #b3261e; color: #fff; }
   .boton-peligro:hover { background: #8f1d17; border-color: #8f1d17; }
   .lotes { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -126,11 +127,28 @@
       <div class="panel-cabecera"><h2>2. Validación y contenido</h2><p class="nota" id="nota-nuevo"></p></div>
       <ul class="controles" id="controles"></ul>
       <div class="rejilla" id="graficos"></div>
-      <div class="acciones" id="acciones" hidden>
-        <button class="boton boton-principal" id="actualizar" type="button">Actualizar la web</button>
-        <button class="boton" id="descartar" type="button">Descartar</button>
+      <div class="confirmar" id="acciones" hidden>
+        <p id="texto-reemplazo"></p>
+        <div class="acciones" style="margin-top:0">
+          <button class="boton boton-principal" id="actualizar" type="button">Sí, actualizar con este archivo</button>
+          <button class="boton" id="descartar" type="button">Descartar</button>
+        </div>
       </div>
       <pre class="log" id="log" hidden></pre>
+    </div>
+
+    <div class="panel deshacer" id="panel-publicar" hidden>
+      <div class="panel-cabecera"><h2>Publicar los cambios</h2>
+        <p class="nota">La herramienta de este equipo ya tiene los datos nuevos, pero la dirección publicada todavía muestra los anteriores. Revise la herramienta y publique cuando esté conforme: la dirección publicada se actualiza en uno o dos minutos.</p></div>
+      <div class="acciones"><button class="boton boton-principal" id="publicar" type="button">Publicar</button></div>
+      <div class="confirmar suave" id="confirmar-pub" hidden>
+        <p><b>¿Publicar ahora?</b> Todas las personas que abran la dirección publicada verán los datos nuevos. Solo se publican los datos agregados de la página, nunca los archivos de Pluz.</p>
+        <div class="acciones" style="margin-top:0">
+          <button class="boton boton-principal" id="publicar-si" type="button">Sí, publicar</button>
+          <button class="boton" id="publicar-no" type="button">Cancelar</button>
+        </div>
+      </div>
+      <pre class="log" id="log-pub" hidden></pre>
     </div>
 
     <div class="panel deshacer" id="panel-deshacer" hidden>
@@ -180,7 +198,8 @@ const pct = v => v == null ? "-" : (v * 100).toFixed(1).replace(".", ",") + " %"
 const num = v => { const [e, d] = String(Math.round(Number(v) * 100) / 100).split("."); return e.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + (d ? "," + d : ""); };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const dia = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;   // fecha local, no UTC
-let ESTADO = null, LOCAL = false, lote = null;
+let ESTADO = null, LOCAL = false, API = null, lote = null;
+const EN_EQUIPO = ["127.0.0.1", "localhost"].includes(location.hostname);
 
 // ------------------------------------------------------------------ pestañas
 document.querySelectorAll(".pestanas button").forEach(b => b.onclick = () => {
@@ -226,7 +245,13 @@ const kpi = (titulo, valor, detalle, color) =>
 // ------------------------------------------------------------------ estado: local o estático
 async function obtenerEstado() {
   // Servida por pipeline/cargar.py hay API; publicada, solo está la foto estado.json.
-  try { const r = await fetch("../api/estado", { cache: "no-store" }); if (r.ok) return await r.json(); } catch (e) {}
+  // Abierta en la dirección publicada, busca el pipeline corriendo en este mismo equipo.
+  const base = EN_EQUIPO ? "../api" : "http://127.0.0.1:8050/api";
+  try {
+    const r = await fetch(base + "/estado", { cache: "no-store", signal: AbortSignal.timeout(3000) });
+    if (r.ok) { API = base; return await r.json(); }
+  } catch (e) {}
+  API = null;
   const r = await fetch("estado.json", { cache: "no-store" });
   if (!r.ok) throw new Error("No se encontró estado.json");
   return await r.json();
@@ -236,10 +261,14 @@ async function cargarEstado(nuevo) {
   let d;
   try { d = await obtenerEstado(); } catch (e) { $("modo").innerHTML = `<span class="er">No se pudo leer el estado: ${esc(e.message)}</span>`; return; }
   ESTADO = d; LOCAL = d.modo === "local";
-  $("modo").innerHTML = LOCAL
-    ? "<b>Modo local.</b> El archivo se valida, se guarda como lote nuevo y la web se actualiza desde este equipo."
-    : "<b>Vista de validación.</b> El archivo se revisa dentro de su navegador y no se envía a ningún servidor. Para incorporarlo a la herramienta, abra esta página en el equipo del pipeline con <code>python pipeline/cargar.py</code>.";
-  $("nav-herramienta").href = d.web || "../";
+  $("modo").innerHTML = !LOCAL
+    ? "<b>Vista de validación.</b> El archivo se revisa dentro de su navegador y no se envía a ningún servidor. Para incorporarlo a la herramienta, corra <code>python pipeline/cargar.py</code> en el equipo del pipeline y recargue esta página: se habilitan la carga, la actualización, el deshacer y la publicación."
+    : (EN_EQUIPO ? "<b>Modo local.</b>" : "<b>Conectado al pipeline de este equipo.</b>") +
+      " El archivo se valida, se compara con lo ya cargado y, si cambia algo, se incorpora a la herramienta con su confirmación. Los archivos no salen de este equipo." +
+      (d.demo ? " <b>Modo demostración:</b> no se toca la herramienta real." : "");
+  $("nav-herramienta").href = LOCAL && EN_EQUIPO ? d.web : "../";
+  $("panel-publicar").hidden = !(LOCAL && d.pendiente_publicar);
+  $("confirmar-pub").hidden = true;
   $("panel-lotes").hidden = !LOCAL;
   const ult = (d.respaldos || [])[0];
   $("panel-deshacer").hidden = !(LOCAL && ult);
@@ -372,6 +401,8 @@ function validar(r) {
     const per = (ESTADO.fuentes || {})["periodo_" + r.fuente];
     if (per) {
       const fin = new Date(per[1] + "T23:59:59"), nuevas = validas.filter(d => d > fin).length;
+      // Un archivo que termina antes del último día cargado reemplaza todo lo posterior.
+      if (dia(max) < per[1]) { ctl.push(["er", `El archivo termina el ${extra.hasta}, antes del último día ya cargado (${per[1]}): todo lo cargado entre esas fechas se perdería, porque el archivo reemplaza desde el ${extra.desde}. ¿Es el archivo de otra semana?`]); }
       ctl.push([nuevas ? "ok" : "av", nuevas
         ? `<b>${num(nuevas)}</b> filas nuevas después del ${per[1]}, último día ya cargado. ${n - malas - nuevas ? num(n - malas - nuevas) + " filas caen en el periodo ya cargado y lo reemplazan." : ""}`
         : `Ninguna fila es posterior al ${per[1]}: el archivo solo repite o corrige un periodo ya cargado, y lo reemplaza.`]);
@@ -425,12 +456,27 @@ async function subir(f) {
   $("info").innerHTML = `<span class="ok">Archivo válido</span>${avisos ? `, con <span class="av">${avisos} aviso${avisos > 1 ? "s" : ""}</span>` : ""}.`;
   if (!LOCAL) return;
 
-  // En local, el servidor vuelve a validar con pandas y guarda el lote.
-  const s = await fetch("../api/subir", { method: "POST", headers: { "X-Nombre": encodeURIComponent(f.name) }, body: f });
+  // Segunda verificación, en el pipeline: el contrato con pandas y la comparación con lo ya cargado.
+  $("info").innerHTML += " Comparando con lo ya cargado…";
+  const s = await fetch(API + "/subir", { method: "POST", headers: { "X-Nombre": encodeURIComponent(f.name) }, body: f });
   const d = await s.json();
   if (!s.ok) { $("info").innerHTML = `<span class="er">El pipeline rechazó el archivo:</span> ${esc(d.error)}`; return; }
+  const c = d.comparacion, periodo = c.modo === "historico" ? `desde el ${c.desde}` : "foto completa";
+  if (c.sin_cambios) {
+    $("controles").innerHTML += `<li class="ok">Es idéntico a lo ya cargado (${periodo}, ${num(c.iguales)} filas iguales).</li>`;
+    $("info").innerHTML = `<span class="ok">Sin cambios.</span> El archivo es igual a lo que la herramienta ya tiene: no se guarda ni se actualiza nada.`;
+    return;
+  }
   lote = d.lote;
-  $("info").innerHTML += ` Guardado en el lote <b>${esc(d.lote)}</b> (el pipeline leyó ${num(d.filas)} filas).`;
+  $("controles").innerHTML +=
+    `<li class="${c.quitadas ? "av" : "ok"}">Frente a lo ya cargado (${periodo}): <b>${num(c.agregadas)}</b> filas nuevas, <b>${num(c.quitadas)}</b> que hoy están y no vienen en el archivo, ${num(c.iguales)} iguales.</li>` +
+    (c.posteriores ? `<li class="er"><b>${num(c.posteriores)}</b> filas ya cargadas son posteriores al ${c.hasta} y se perderían, porque el archivo reemplaza todo lo cargado desde el ${c.desde}. ¿Es el archivo de otra semana?</li>` : "");
+  $("texto-reemplazo").innerHTML = c.quitadas
+    ? `<b>¿Actualizar con este archivo?</b> Se agregarán ${num(c.agregadas)} filas y se quitarán ${num(c.quitadas)} de la herramienta. Si no es lo esperado, descártelo.`
+    : `<b>¿Actualizar con este archivo?</b> Se agregarán ${num(c.agregadas)} filas nuevas; no se quita nada de lo ya cargado.`;
+  $("acciones").classList.toggle("suave", !c.quitadas);
+  $("actualizar").className = "boton " + (c.quitadas ? "boton-peligro" : "boton-principal");
+  $("info").innerHTML = `<span class="ok">Archivo válido</span> y con cambios: guardado en el lote <b>${esc(d.lote)}</b>, pendiente de su confirmación.`;
   $("acciones").hidden = false;
   cargarEstado(lote);
 }
@@ -442,17 +488,17 @@ z.ondragleave = () => z.classList.remove("sobre");
 z.ondrop = e => { e.preventDefault(); z.classList.remove("sobre"); e.dataTransfer.files[0] && subir(e.dataTransfer.files[0]); };
 
 $("descartar").onclick = async () => {
-  await fetch("../api/descartar", { method: "POST", body: JSON.stringify({ lote }) });
+  await fetch(API + "/descartar", { method: "POST", body: JSON.stringify({ lote }) });
   $("info").textContent = "Lote descartado. No se cambió nada."; $("panel-nuevo").hidden = true; lote = null; cargarEstado();
 };
 
 $("actualizar").onclick = async () => {
   $("actualizar").disabled = $("descartar").disabled = true;
-  $("log").hidden = false; $("log").textContent = "Actualizando: valida, calcula el índice, registra en MLflow y publica…";
-  const d = await (await fetch("../api/actualizar", { method: "POST", body: JSON.stringify({ lote }) })).json();
+  $("log").hidden = false; $("log").textContent = "Actualizando: valida, calcula el índice y registra en MLflow…";
+  const d = await (await fetch(API + "/actualizar", { method: "POST", body: JSON.stringify({ lote }) })).json();
   $("log").textContent = d.log;
   $("actualizar").disabled = $("descartar").disabled = false;
-  if (d.ok) { $("info").innerHTML += ` <span class="ok">Web actualizada.</span>`; $("acciones").hidden = true; await cargarEstado(lote); window.open(ESTADO.web || "../", "_blank"); }
+  if (d.ok) { $("info").innerHTML += ` <span class="ok">Herramienta actualizada en este equipo.</span>`; $("acciones").hidden = true; await cargarEstado(lote); window.open(ESTADO.web, "_blank"); }
   else $("info").innerHTML += ` <span class="er">La actualización no publicó (código ${d.codigo}); revise el registro.</span>`;
 };
 
@@ -465,14 +511,28 @@ $("restaurar").onclick = () => {
 $("restaurar-no").onclick = () => { $("confirmar").hidden = true; $("restaurar").disabled = false; };
 $("restaurar-si").onclick = async () => {
   $("restaurar-si").disabled = $("restaurar-no").disabled = true;
-  const r = await fetch("../api/restaurar", { method: "POST", body: JSON.stringify({ id: ESTADO.respaldos[0].id }) });
+  const r = await fetch(API + "/restaurar", { method: "POST", body: JSON.stringify({ id: ESTADO.respaldos[0].id }) });
   const d = await r.json();
   $("restaurar-si").disabled = $("restaurar-no").disabled = false; $("restaurar").disabled = false;
   if (!r.ok) { $("info").innerHTML = `<span class="er">No se pudo restaurar:</span> ${esc(d.error)}`; return; }
   $("panel-nuevo").hidden = true; lote = null;
   $("info").innerHTML = `<span class="ok">Carga deshecha.</span> Se borró el lote ${esc(d.restaurado.lote)} y la herramienta volvió al corte ${esc(d.restaurado.corte_previo || "-")}.`;
   await cargarEstado();
-  window.open(ESTADO.web || "../", "_blank");   // la herramienta ya con la configuración anterior
+  window.open(ESTADO.web, "_blank");   // la herramienta ya con la configuración anterior
+};
+
+// Publicar: también con confirmación.
+$("publicar").onclick = () => { $("confirmar-pub").hidden = false; $("publicar").disabled = true; };
+$("publicar-no").onclick = () => { $("confirmar-pub").hidden = true; $("publicar").disabled = false; };
+$("publicar-si").onclick = async () => {
+  $("publicar-si").disabled = $("publicar-no").disabled = true;
+  $("log-pub").hidden = false; $("log-pub").textContent = "Publicando…";
+  const r = await fetch(API + "/publicar", { method: "POST", body: "{}" });
+  const d = await r.json();
+  $("publicar-si").disabled = $("publicar-no").disabled = false; $("publicar").disabled = false;
+  $("log-pub").textContent = d.log || d.error || "";
+  if (r.ok && d.ok) { $("info").innerHTML = `<span class="ok">Publicado.</span> La dirección publicada muestra los datos nuevos en uno o dos minutos.`; $("confirmar-pub").hidden = true; }
+  else $("info").innerHTML = `<span class="er">No se pudo publicar.</span> Revise el registro.`;
 };
 
 // Al cambiar el tema (js/tema.js) se redibujan los gráficos con los colores nuevos.

@@ -15,36 +15,41 @@ El recorrido completo es este:
 
 ## Carga semanal desde el navegador
 
-La página está en cargar/index.html y funciona de dos maneras.
-
-**En la dirección publicada (cargar/): solo revisión.** La página revisa el archivo dentro del navegador y no lo envía a ningún lado. Sirve para que el área confirme que el archivo de la semana viene bien antes de pasarlo. Los gráficos del modelo y la literatura salen de cargar/estado.json, que solo lleva conteos, periodos y métricas agregadas. Ese archivo se regenera solo en cada corrida que publica y en cada benchmark.
-
-**En el equipo del pipeline: validación, carga, actualización y deshacer.**
-
 ```
 python pipeline/cargar.py
 ```
 
-Abre http://127.0.0.1:8050/cargar/. Tiene tres pestañas.
+Con esa sola orden, la página cargar/ hace todo el flujo semanal, tanto en http://127.0.0.1:8050/cargar/ como en la dirección publicada: la página publicada detecta el pipeline corriendo en el mismo equipo y se conecta a él. Los archivos nunca salen del equipo; la página publicada solo habla con este programa, y este programa solo acepta pedidos de la dirección publicada y de sí mismo. Con python pipeline/cargar.py publicado se abre directamente la dirección publicada.
 
-* **Cargar semana.** Arrastrar el archivo de la semana, en .xlsx o .csv.
-  * La fuente se reconoce por el nombre, con los patrones de config.py. Si es CSV, o si el Excel trae otro nombre, se reconoce por las columnas.
-  * Se muestran los controles: columnas del contrato, fechas legibles y futuras, filas nuevas frente al último día ya cargado, filas sin alimentador, filas repetidas y SAIDI negativo. También gráficos chicos de registros por semana, SAIDI por semana y alimentadores con más registros.
-  * Si cumple el contrato, el servidor lo valida otra vez con pandas y lo guarda en un lote nuevo, pipeline/datos/lotes/AAAAMMDD_carga.
-  * **Actualizar la web** guarda primero un respaldo y luego corre la actualización completa, la misma de python pipeline/actualizar.py. Al terminar abre la herramienta con los datos nuevos. **Descartar** borra el lote antes de actualizar.
-* **Deshacer la última carga.** Aparece después de actualizar. «Restaurar la configuración anterior» pide una segunda confirmación y después:
-  * borra el lote de esa carga;
-  * devuelve data/, las salidas del modelo (reporte, modelo vigente, predicción, plan) y cargar/estado.json a como estaban;
-  * renueva la versión ?v= de los datos para que el navegador no muestre la copia vieja;
-  * abre la herramienta ya restaurada.
+Sin el pipeline corriendo, la página publicada solo revisa el archivo dentro del navegador. Sirve para que el área confirme que el archivo de la semana viene bien antes de pasarlo.
 
-  Se guardan las últimas cinco cargas en pipeline/salidas/respaldos y se deshacen de una en una, de la más reciente a la más antigua. Las corridas de MLflow no se borran: quedan como historial. Si la carga deshecha ya se había publicado, hay que volver a publicar para que la dirección publicada muestre la versión restaurada.
+**Qué necesita el equipo.** Una copia del proyecto, las bibliotecas (python pipeline/actualizar.py instalar) y, una sola vez, las carpetas pipeline/datos, con los lotes de Pluz, y pipeline/salidas, con el modelo vigente, copiadas del equipo donde ya corre el pipeline: esas carpetas nunca se publican. Para el botón Publicar, además, permiso para publicar con las credenciales guardadas en el equipo.
+
+**El flujo, en la pestaña Cargar semana:**
+
+1. **Arrastrar el archivo de la semana**, en .xlsx o .csv. La fuente se reconoce por el nombre, con los patrones de config.py, o por las columnas.
+2. **Primera verificación, en el navegador:** columnas del contrato, fechas legibles y futuras, filas nuevas frente al último día ya cargado, archivos que terminan antes de lo ya cargado, filas sin alimentador, filas repetidas y SAIDI negativo. Gráficos chicos de registros por semana, SAIDI por semana y alimentadores con más registros.
+3. **Segunda verificación, en el pipeline:** pandas vuelve a validar el contrato y compara el archivo con lo que la herramienta ya tiene en el periodo que reemplazaría. Un lote nuevo reemplaza todo lo cargado desde su primera fecha.
+   * Si el archivo es idéntico a lo ya cargado, no se hace nada: no se guarda lote ni se actualiza.
+   * Si cambia algo, la página dice cuántas filas se agregan, cuántas se quitarían y cuántas quedan iguales, y avisa en rojo si se perderían filas posteriores al archivo. El archivo queda en un lote nuevo, pipeline/datos/lotes/AAAAMMDD_carga, pendiente de confirmación.
+4. **Confirmar:** «Sí, actualizar con este archivo» guarda un respaldo y corre la actualización completa, la misma de python pipeline/actualizar.py, y abre la herramienta de este equipo con los datos nuevos. El botón va en rojo si la carga quita filas. «Descartar» borra el lote sin tocar nada.
+5. **Publicar:** el panel «Publicar los cambios» aparece cuando la herramienta de este equipo tiene datos que la dirección publicada todavía no muestra. Pide una segunda confirmación y publica solo data, index.html y cargar/estado.json; la dirección publicada se actualiza en uno o dos minutos.
+6. **Deshacer la última carga:** «Restaurar la configuración anterior» pide una segunda confirmación y después:
+   * borra el lote de esa carga;
+   * devuelve data/, las salidas del modelo (reporte, modelo vigente, predicción, plan) y cargar/estado.json a como estaban;
+   * renueva la versión ?v= de los datos para que el navegador no muestre la copia vieja;
+   * abre la herramienta ya restaurada.
+
+   Se guardan las últimas cinco cargas en pipeline/salidas/respaldos y se deshacen de una en una, de la más reciente a la más antigua. Las corridas de MLflow no se borran: quedan como historial. Si la carga deshecha ya se había publicado, el panel Publicar vuelve a aparecer para publicar la versión restaurada.
+
+**Las otras pestañas:**
+
 * **Modelo y MLflow.** Benchmark de modelos con la regla por historial en amarillo, cobertura del 40 % en cada corrida, cobertura por tamaño de lista y lectura del monitoreo.
-* **Literatura.** Las fuentes de papers/README.md agrupadas por la decisión que respaldan, con enlace al PDF solo en local, porque los PDF no se publican.
+* **Literatura.** Las fuentes de papers/README.md agrupadas por la decisión que respaldan, con enlace al PDF solo en el equipo del pipeline, porque los PDF no se publican.
 
-Publicar sigue siendo un paso aparte y con confirmación. Para probar sin tocar los datos reales: PLUZ_DEMO=pipeline/datos/demo python pipeline/cargar.py. En modo demostración tampoco se toca cargar/estado.json.
+Los gráficos del modelo y la literatura de la página publicada salen de cargar/estado.json, que solo lleva conteos, periodos y métricas agregadas, y se regenera en cada corrida que publica y en cada benchmark.
 
-La herramienta principal tiene en la cabecera un botón **Benchmark** que abre benchmark/.
+Para probar sin tocar los datos reales: PLUZ_DEMO=pipeline/datos/demo python pipeline/cargar.py. En modo demostración no se publica ni se toca cargar/estado.json.
 
 
 ## La rutina semanal

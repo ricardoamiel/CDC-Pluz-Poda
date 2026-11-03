@@ -9,6 +9,30 @@ Los datos de la página se generan con el pipeline de la carpeta pipeline, que c
 Junto a la herramienta hay dos páginas más, en la misma dirección: **benchmark/**, con la comparación de modelos, que se abre con el botón Benchmark de la cabecera, y **cargar/**, para revisar el archivo semanal antes de incorporarlo.
 
 
+## Cómo se ve
+
+Tres páginas en la misma dirección, con la barra de la cabecera para pasar de una a otra: Herramienta, Benchmark y Carga semanal. El botón de la derecha cambia el tema: claro, que es el de partida, el del sistema u oscuro.
+
+**Herramienta.** El mapa de criticidad del piloto, la lista priorizada, los indicadores del plan y la comparación con otros distritos.
+
+![Herramienta: plan de poda priorizado del piloto Los Olivos](docs/capturas/herramienta.png)
+
+**Benchmark.** Los modelos comparados frente a la regla por historial, con la decisión y sus métricas.
+
+![Benchmark de modelos](docs/capturas/benchmark.png)
+
+**Carga semanal.** Se arrastra el archivo de la semana y la página revisa que cumpla lo pactado, muestra qué trae y avisa si algo no cuadra.
+
+![Carga semanal: revisión del archivo](docs/capturas/carga_validacion.png)
+
+Con el pipeline corriendo en el equipo, la carga hace una segunda verificación: compara el archivo con lo que la herramienta ya tiene en ese periodo. Si es idéntico, no hace nada. Si cambia algo, dice cuántas filas se agregan y cuántas se quitarían, y pide confirmación. En este ejemplo el archivo es de una semana anterior y borraría lo cargado después, así que la página lo advierte en rojo.
+
+![Carga semanal: comparación con lo ya cargado y confirmación](docs/capturas/carga_doble_verificacion.png)
+
+Si una carga salió mal, se deshace con una segunda confirmación y la herramienta vuelve a los datos anteriores.
+
+![Carga semanal: deshacer la última carga](docs/capturas/carga_deshacer.png)
+
 ## Qué preguntas responde
 
 El tablero está armado alrededor de las cinco preguntas que se hacen en la reunión, y cada pieza contesta una:
@@ -82,7 +106,7 @@ python pipeline/actualizar.py ver
 
 Algunos parámetros en la dirección sirven para compartir una vista concreta o para capturarla en un informe:
 
-* **tema=claro** o **tema=oscuro** fija el tema.
+* **tema=claro**, **tema=sistema** o **tema=oscuro** fija el tema. Sin parámetro la página abre en claro; el botón de la cabecera pasa por claro, el tema del sistema y oscuro, y la elección se recuerda en la herramienta, el benchmark y la carga semanal.
 * **fondo=satelital** abre el mapa del piloto con el fondo satelital.
 * **nivel=subestaciones** abre directamente la vista por subestación.
 * **vista=comparar** abre la comparación de distritos.
@@ -102,7 +126,7 @@ python pipeline/actualizar.py ver
 
 La primera orden valida el lote, monitorea el modelo vigente y lo recalibra si hace falta, predice los tres meses siguientes al último mes con datos, recalcula el índice de los ocho distritos y reescribe la carpeta data. La segunda abre la página para revisarla.
 
-También se puede hacer desde el navegador, sin escribir órdenes: python pipeline/cargar.py abre la página de carga semanal. Ahí se arrastra el archivo de la semana, se revisa qué trae, se actualiza la herramienta con un botón y, si el archivo se cargó mal, se vuelve a la configuración anterior con «Restaurar», previa confirmación. En la dirección publicada, cargar/ solo revisa el archivo dentro del navegador, sin enviarlo a ningún lado. El detalle está en pipeline/README.md.
+También se puede hacer desde el navegador, sin escribir órdenes. Basta con correr python pipeline/cargar.py en el equipo del pipeline y abrir la Carga semanal, en local o en la dirección publicada: la página detecta el pipeline de ese equipo y habilita todo el flujo. Se arrastra el archivo, se revisa, se compara con lo ya cargado, se confirma, se actualiza la herramienta, se deshace si hizo falta y se publica, cada paso con su botón. Sin el pipeline corriendo, la Carga semanal solo revisa el archivo dentro del navegador, sin enviarlo a ningún lado. El detalle está en pipeline/README.md.
 
 Los Excel de Pluz nunca se publican: se quedan en el equipo que corre el pipeline.
 
@@ -114,11 +138,13 @@ Los Excel de Pluz nunca se publican: se quedan en el equipo que corre el pipelin
 * **js/app.js.** Lógica del mapa, la curva, la lista y las fichas del piloto.
 * **js/comparar.js.** Pestaña de comparación entre distritos.
 * **js/teselas.js.** Fondo satelital de los mapas, con las teselas de Esri.
+* **js/tema.js.** Tema claro, del sistema u oscuro, común a las tres páginas.
 * **js/vendor.** Biblioteca D3, versión 7.9.0, y SheetJS 0.18.5, que lee los Excel en la página de carga.
 * **data.** Lo que carga la página: criticidad del piloto, datos de los ocho distritos y geografía. Cada archivo va en dos copias con el mismo contenido: la de extensión js la carga la página, y la de extensión json sirve para reutilizar los datos.
 * **assets.** Logotipo completo, isotipo e icono de pestaña.
 * **pipeline.** Flujo de datos, del lote de Pluz a la carpeta data. Se documenta en pipeline/README.md.
 * **docs.** Diagramas de arquitectura en SVG, el generador que los dibuja y las guías paso a paso de las dos propuestas.
+* **docs/capturas.** Capturas de las tres páginas que se muestran al inicio de este documento.
 * **ARQUITECTURA.md.** Propuestas para la operación, en las instalaciones de Pluz y en AWS.
 * **docs/PRUEBA_DE_USUARIO.md.** Recorrido de la herramienta en el papel de un usuario de Pluz sin formación técnica: lo fuerte y las mejoras por prioridad. Las mejoras rápidas ya están aplicadas.
 * **docs/Presentacion_Cambios_Reunion3_Semana_11.pptx.** Presentación del modelo de contraste, la prueba de usuario y las mejoras aplicadas.

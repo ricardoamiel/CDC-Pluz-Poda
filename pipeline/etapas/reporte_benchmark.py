@@ -22,6 +22,52 @@ def _mes(texto):
 
 D3 = config.REPO / "js" / "vendor" / "d3.v7.9.0.min.js"
 
+# Mismo template que la herramienta y la carga semanal: hoja de estilos, tema (claro, sistema u
+# oscuro), logotipo y barra de navegación. Todo se incrusta para que el reporte siga siendo un
+# solo archivo que se abre sin conexión.
+CSS_COMUN = config.REPO / "css" / "estilos.css"
+TEMA_JS = config.REPO / "js" / "tema.js"
+LOGO = config.REPO / "assets" / "pluz-logo.png"
+FAVICON = config.REPO / "assets" / "favicon.png"
+
+SPRITE = """<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><defs>
+<symbol viewBox="0 0 24 24" id="i-mapa"><path d="M9 4 3 6.5v13L9 17l6 2.5 6-2.5v-13L15 6.5 9 4Z"/><path d="M9 4v13M15 6.5v13"/></symbol>
+<symbol viewBox="0 0 24 24" id="i-curva"><path d="M3 3v16.5h18"/><path d="M6.5 15.5c3.5 0 4.5-8 8-8 2.5 0 3 4 4.5 4"/></symbol>
+<symbol viewBox="0 0 24 24" id="i-subir"><path d="M21 15.5v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3"/><path d="m7.5 8 4.5-4.5L16.5 8M12 3.5v12"/></symbol>
+<symbol viewBox="0 0 24 24" id="i-sol"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2 12h2.4M19.6 12H22M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></symbol>
+<symbol viewBox="0 0 24 24" id="i-luna"><path d="M20.5 14.3A8.7 8.7 0 0 1 9.7 3.5a8.7 8.7 0 1 0 10.8 10.8Z"/></symbol>
+<symbol viewBox="0 0 24 24" id="i-pantalla"><rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M8.5 20.5h7M12 16.5v4"/></symbol>
+</defs></svg>"""
+
+
+def _incrustar(ruta):
+    import base64
+    return "data:image/png;base64," + base64.b64encode(ruta.read_bytes()).decode()
+
+
+def _cabecera(r):
+    return f"""<header class="cabecera">
+  <div class="marca">
+    <img class="marca-logo" src="{_incrustar(LOGO)}" alt="Pluz Energía" width="491" height="250">
+    <span class="marca-barra" aria-hidden="true"></span>
+    <div class="marca-texto">
+      <p class="sobretitulo">Subgerencia MT&nbsp;/&nbsp;BT · Gestión de vegetación en red aérea</p>
+      <h1>Benchmark de modelos</h1>
+      <p class="subtitulo">Datos al corte de <strong>{_mes(r['corte'])}</strong> · comparación de modelos frente a la regla por historial</p>
+    </div>
+  </div>
+  <div class="cabecera-acciones">
+    <nav class="navegacion" aria-label="Páginas">
+      <a href="../"><svg class="ico" aria-hidden="true"><use href="#i-mapa"/></svg>Herramienta</a>
+      <a href="./" aria-current="page"><svg class="ico" aria-hidden="true"><use href="#i-curva"/></svg>Benchmark</a>
+      <a href="../cargar/"><svg class="ico" aria-hidden="true"><use href="#i-subir"/></svg>Carga semanal</a>
+    </nav>
+    <button class="boton-icono" id="boton-tema" type="button" aria-label="Tema claro" title="Tema claro">
+      <svg class="ico" aria-hidden="true"><use href="#i-sol"/></svg>
+    </button>
+  </div>
+</header>"""
+
 COLORES = {
     "Regla por historial": "#76839a",
     "Regresión logística": "#395aa1",
@@ -90,35 +136,33 @@ def tabla_ejemplos(r):
 
 
 ESTILOS = """
-body{margin:0;background:#f6f8fc;color:#131a26;font:14px/1.55 system-ui,"Segoe UI",Arial,sans-serif}
-main{max-width:1240px;margin:0 auto;padding:24px 18px}
-header,section{background:#fff;border:1px solid #dee5f0;border-radius:14px;padding:18px 22px;margin-bottom:16px}
-header{border-top:4px solid #395aa1}
-.sobre{margin:0;color:#76839a;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
-h1{margin:4px 0 8px;font-size:26px}h2{margin:0 0 8px;font-size:18px}h3{margin:6px 0;font-size:14px}
-.decision{background:#e8eef8;border-color:#9db1d6}
+.bm{max-width:1440px;margin:0 auto;display:grid;gap:16px;font-size:14px;line-height:1.55;color:var(--tinta)}
+.bm section{background:var(--superficie-2);border:1px solid var(--borde);border-radius:var(--radio);box-shadow:var(--sombra);padding:18px 22px;min-width:0}
+.bm h2{margin:0 0 8px;font-size:18px;color:var(--tinta)}.bm h3{margin:6px 0;font-size:14px;color:var(--tinta)}
+.bm .intro h2{font-size:22px}
+.bm .decision{background:var(--azul-100);border-color:var(--azul-300)}
 .tabla{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:12.5px;margin:8px 0}
-th,td{padding:6px 8px;border-bottom:1px solid #dee5f0;text-align:right;white-space:nowrap}
-th:first-child,td:first-child,#ejemplos td:last-child{text-align:left}th{background:#f4f7fc;font-weight:600}
-tr.elegido td{background:#e8eef8;font-weight:600}#ejemplos td:last-child{white-space:normal;min-width:240px}
-tr.tFN td:nth-child(2){color:#b3261e}tr.tFP td:nth-child(2){color:#ac5700}tr.tVP td:nth-child(2){color:#2f7d32}
+th,td{padding:6px 8px;border-bottom:1px solid var(--borde);text-align:right;white-space:nowrap}
+th:first-child,td:first-child,#ejemplos td:last-child{text-align:left}th{background:var(--superficie-3);font-weight:600}
+tr.elegido td{background:var(--azul-100);font-weight:600}#ejemplos td:last-child{white-space:normal;min-width:240px}
+tr.tFN td:nth-child(2){color:var(--critico)}tr.tFP td:nth-child(2){color:var(--aviso)}tr.tVP td:nth-child(2){color:var(--ok)}
 .punto{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:0}
 .par{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:900px){.par{grid-template-columns:1fr}}
 .rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
 .grafico svg{display:block;width:100%;height:auto;overflow:visible}
-.eje text{fill:#4e5a6e;font-size:11px}.eje path,.eje line{stroke:#c2cee2}.rejilla-y line{stroke:#eef2f9}
-.titulo-eje{fill:#4e5a6e;font-size:11.5px}
+.eje text{fill:var(--tinta-2);font-size:11px}.eje path,.eje line{stroke:var(--borde-fuerte)}.rejilla-y line{stroke:var(--rejilla)}
+.titulo-eje{fill:var(--tinta-2);font-size:11.5px}
 .leyenda{display:flex;flex-wrap:wrap;gap:6px 12px;margin:8px 0 2px;font-size:12px}
-.leyenda button{font:inherit;border:1px solid #dee5f0;background:#fff;border-radius:999px;padding:3px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.leyenda button{font:inherit;color:var(--tinta);border:1px solid var(--borde);background:var(--superficie-2);border-radius:999px;padding:3px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .leyenda button.apagado{opacity:.4}
 .selector{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
-.selector button{font:inherit;font-size:12.5px;border:1px solid #c2cee2;background:#f4f7fc;border-radius:8px;padding:5px 11px;cursor:pointer}
-.selector button.activo{background:#395aa1;color:#fff;border-color:#395aa1}
-.ayuda{position:fixed;pointer-events:none;background:#fff;border:1px solid #c2cee2;border-radius:8px;padding:7px 10px;font-size:12px;box-shadow:0 6px 18px rgba(19,26,38,.14);display:none;z-index:10}
-.nota{color:#4e5a6e;font-size:12.5px}
-tr.piloto td{background:#fff8e1}.literatura{padding-left:18px;font-size:13px;line-height:1.5}.literatura li{margin-bottom:6px}.literatura a{color:#395aa1}#g-errores .grafico{max-width:680px}.tabla-alta{max-height:420px;overflow-y:auto}
-th.ordenable{cursor:pointer;user-select:none}th.ordenable:hover{background:#e8eef8}
-th .flecha{color:#9db1d6;margin-left:4px;font-size:10px}th.asc .flecha,th.desc .flecha{color:#395aa1}
+.selector button{font:inherit;font-size:12.5px;color:var(--tinta);border:1px solid var(--borde-fuerte);background:var(--superficie-3);border-radius:8px;padding:5px 11px;cursor:pointer}
+.selector button.activo{background:var(--pluz-azul);color:#fff;border-color:var(--pluz-azul)}
+.ayuda{position:fixed;pointer-events:none;background:var(--superficie-2);color:var(--tinta);border:1px solid var(--borde-fuerte);border-radius:8px;padding:7px 10px;font-size:12px;box-shadow:var(--sombra-alta);display:none;z-index:10}
+.bm .nota{color:var(--tinta-2);font-size:12.5px}
+tr.piloto td{background:rgba(252,193,63,.16)}.literatura{padding-left:18px;font-size:13px;line-height:1.5}.literatura li{margin-bottom:6px}.literatura a{color:var(--azul-700)}#g-errores .grafico{max-width:680px}.tabla-alta{max-height:420px;overflow-y:auto}
+th.ordenable{cursor:pointer;user-select:none}th.ordenable:hover{background:var(--azul-100)}
+th .flecha{color:var(--azul-300);margin-left:4px;font-size:10px}th.asc .flecha,th.desc .flecha{color:var(--azul-700)}
 """
 
 GRAFICOS = r"""
@@ -126,7 +170,7 @@ const R = JSON.parse(document.getElementById("datos").textContent);
 const C = R.colores;
 const fmt = (v, d = 3) => v == null ? "" : v.toFixed(d).replace(".", ",");
 const pct = v => (100 * v).toFixed(1).replace(".", ",") + " %";
-const ayuda = d3.select("body").append("div").attr("class", "ayuda");
+const ayuda = d3.select(".viz-root").append("div").attr("class", "ayuda");
 const mostrar = (e, html) => ayuda.style("display", "block").html(html)
   .style("left", (e.clientX + 14) + "px").style("top", (e.clientY + 14) + "px");
 const ocultar = () => ayuda.style("display", "none");
@@ -147,19 +191,19 @@ function lineas(sel, series, op) {
   svg.append("text").attr("class", "titulo-eje").attr("x", (W + m.l) / 2).attr("y", H - 8).attr("text-anchor", "middle").text(op.xt || "");
   svg.append("text").attr("class", "titulo-eje").attr("transform", "rotate(-90)").attr("x", -(H - m.b + m.t) / 2).attr("y", 14).attr("text-anchor", "middle").text(op.yt || "");
   if (op.diagonal) svg.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(1)).attr("y2", y(1))
-    .attr("stroke", "#c2cee2").attr("stroke-dasharray", "4 4");
+    .style("stroke", "var(--borde-fuerte)").attr("stroke-dasharray", "4 4");
   if (op.vertical != null) {
     svg.append("line").attr("x1", x(op.vertical)).attr("x2", x(op.vertical)).attr("y1", m.t).attr("y2", H - m.b)
-      .attr("stroke", "#131a26").attr("stroke-dasharray", "3 3");
+      .style("stroke", "var(--tinta)").attr("stroke-dasharray", "3 3");
     svg.append("text").attr("x", x(op.vertical) + 6).attr("y", m.t + 12).attr("font-size", 11.5)
-      .attr("font-weight", 700).attr("fill", "#131a26").text(op.verticalTexto || "");
+      .attr("font-weight", 700).style("fill", "var(--tinta)").text(op.verticalTexto || "");
   }
   const linea = d3.line().x(p => x(p[0])).y(p => y(p[1]));
   const g = svg.append("g").selectAll("path").data(series).join("path")
     .attr("fill", "none").attr("stroke", s => s.color).attr("stroke-width", s => s.grueso ? 3 : 1.8)
     .attr("stroke-dasharray", s => s.punteada ? "5 4" : null).attr("d", s => linea(s.puntos))
     .style("display", s => s.oculta ? "none" : null);
-  const marca = svg.append("circle").attr("r", 4.5).attr("fill", "#131a26").style("display", "none");
+  const marca = svg.append("circle").attr("r", 4.5).style("fill", "var(--tinta)").style("display", "none");
   svg.append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.l - m.r).attr("height", H - m.t - m.b)
     .attr("fill", "transparent").on("pointermove", e => {
       const [px, py] = d3.pointer(e);
@@ -204,10 +248,10 @@ function barras(sel) {
     svg.append("g").attr("class", "eje").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).tickSize(0)).select(".domain").remove();
     svg.selectAll("rect.b").data(datos).join("rect").attr("class", "b").attr("x", m.l).attr("y", d => y(d.n))
       .attr("height", y.bandwidth()).attr("rx", 3).attr("fill", d => C[d.n])
-      .attr("stroke", d => d.n === R.decision.modelo ? "#131a26" : "none").attr("stroke-width", 2)
+      .style("stroke", d => d.n === R.decision.modelo ? "var(--tinta)" : "none").attr("stroke-width", 2)
       .attr("width", d => x(d.v) - m.l);
     svg.selectAll("text.v").data(datos).join("text").attr("class", "v").attr("x", d => x(d.v) + 6)
-      .attr("y", d => y(d.n) + y.bandwidth() / 2 + 4).attr("font-size", 12).attr("fill", "#131a26").text(d => f(d.v));
+      .attr("y", d => y(d.n) + y.bandwidth() / 2 + 4).attr("font-size", 12).style("fill", "var(--tinta)").text(d => f(d.v));
   }
   botones.selectAll("button").data(metricas).join("button").text(d => d[1]).on("click", (_, d) => dibujar(d[0]));
   dibujar("pr_auc");
@@ -274,7 +318,7 @@ nombres.forEach(n => {
   const y = d3.scaleBand().domain(datos.map(d => d.nombre)).range([m.t, H - m.b]).padding(.35);
   svg.append("g").attr("class", "eje").attr("transform", `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(6).tickFormat(v => pct(v)));
   svg.append("g").attr("class", "eje").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).tickSize(0)).select(".domain").remove();
-  svg.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y1", m.t).attr("y2", H - m.b).attr("stroke", "#131a26");
+  svg.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y1", m.t).attr("y2", H - m.b).style("stroke", "var(--tinta)");
   const g = svg.selectAll("g.v").data(datos).join("g").attr("class", "v")
     .on("pointermove", (e, d) => mostrar(e, `<b>${d.nombre}</b><br>Aporte a la cobertura: ${pct(d.aporte_cobertura_40.media)}<br>Intervalo: ${pct(d.aporte_cobertura_40.li)} a ${pct(d.aporte_cobertura_40.ls)}`))
     .on("pointerleave", ocultar);
@@ -406,7 +450,7 @@ def seccion_literatura():
         + " · ".join(f"<a href='{u}' target='_blank' rel='noopener'>{html.escape(n)}</a>" for n, u in enlaces)
         + "</li>" for t, d, enlaces in LITERATURA)
     return ("<section><h2>Literatura que respalda el método</h2>"
-            "<p class='nota'>Resumen de las fuentes de cada decisión. La lista completa, con qué tomamos de cada una, está en la carpeta papers del repositorio.</p>"
+            "<p class='nota'>Resumen de las fuentes de cada decisión. La lista completa, con qué tomamos de cada una, está en la carpeta papers del proyecto.</p>"
             f"<ul class='literatura'>{filas}</ul></section>")
 
 
@@ -474,9 +518,8 @@ def escribir(r, destino):
     filtro = "".join(f"<button data-modelo='{html.escape(m)}'>{html.escape(m)}</button>" for m in modelos_ej)
 
     cuerpo = f"""
-<header><p class="sobre">Pluz Energía y UTEC · Benchmark de modelos</p>
-<h1>¿Regresión logística o un modelo más complejo?</h1>
-<p>Corte de {_mes(r['corte'])}. Entrenamiento de {_mes(part['entrena'][0])} a {_mes(part['entrena'][1])}, con elección de hiperparámetros y umbral en {_mes(part['validacion'][0])} y {_mes(part['validacion'][1])}. Prueba de {_mes(part['prueba'][0])} a {_mes(part['prueba'][1])}, con {r['positivos']['prueba']} casos positivos en {r['filas']['prueba']} filas. Ningún modelo vio la prueba al elegir nada.</p></header>
+<section class="intro"><h2>¿Regresión logística o un modelo más complejo?</h2>
+<p>Corte de {_mes(r['corte'])}. Entrenamiento de {_mes(part['entrena'][0])} a {_mes(part['entrena'][1])}, con elección de hiperparámetros y umbral en {_mes(part['validacion'][0])} y {_mes(part['validacion'][1])}. Prueba de {_mes(part['prueba'][0])} a {_mes(part['prueba'][1])}, con {r['positivos']['prueba']} casos positivos en {r['filas']['prueba']} filas. Ningún modelo vio la prueba al elegir nada.</p></section>
 
 <section class="decision"><h2>Decisión</h2>
 <p>Modelo recomendado: <b>{d['modelo']}</b>. Modelos que superan a la regresión logística con un intervalo que no cruza el cero en la PR AUC: <b>{ganadores}</b>.</p>
@@ -546,8 +589,12 @@ def escribir(r, destino):
     pagina = (
         "<!doctype html><html lang='es'><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-        f"<title>Benchmark de modelos. Pluz Energía</title><style>{ESTILOS}</style></head>"
-        f"<body><main>{cuerpo}</main>"
+        "<meta name='theme-color' content='#395aa1'>"
+        f"<link rel='icon' href='{_incrustar(FAVICON)}' type='image/png'>"
+        f"<title>Benchmark de modelos. Pluz Energía</title>"
+        f"<style>{CSS_COMUN.read_text(encoding='utf-8')}{ESTILOS}</style>"
+        f"<script>{TEMA_JS.read_text(encoding='utf-8')}</script></head>"
+        f"<body>{SPRITE}<div class='viz-root'>{_cabecera(r)}<main class='bm'>{cuerpo}</main></div>"
         f"<script id='datos' type='application/json'>{json.dumps(datos, ensure_ascii=False, default=str, allow_nan=False)}</script>"
         f"<script>{D3.read_text(encoding='utf-8')}</script><script>{GRAFICOS}</script>"
         "</body></html>")
