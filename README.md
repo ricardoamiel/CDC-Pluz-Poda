@@ -6,6 +6,8 @@ Proyecto del curso DS5045, Ciencia de Datos Computacionales. Pluz Energía y UTE
 
 Los datos de la página se generan con el pipeline de la carpeta pipeline, que convierte cada lote semanal de Pluz en los archivos que dibuja la página. Su documentación completa, con el contrato de datos y la arquitectura propuesta para la operación, está en pipeline/README.md.
 
+Junto a la herramienta hay dos páginas más, en la misma dirección: **benchmark/**, con la comparación de modelos, que se abre con el botón Benchmark de la cabecera, y **cargar/**, para revisar el archivo semanal antes de incorporarlo.
+
 
 ## Qué preguntas responde
 
@@ -56,7 +58,7 @@ Los filtros no cambian el plan. El plan lo fija siempre el tamaño elegido: filt
 
 ## Modelo y benchmark
 
-La probabilidad de interferencia a tres meses sale de una regresión logística con el historial de vegetación, la vegetación de los últimos doce meses, las interrupciones de los últimos doce meses y la estacionalidad. No usa ninguna de las tres variables que el índice ya cuenta por su lado: reloj de poda, SAIDI y exposición por clientes y potencia. En la segunda revisión de la reunión N°3 se comparó con la regresión logística ponderada, el refuerzo de gradiente, Random Forest, XGBoost, LightGBM y SVM, y con variantes de la propia regresión logística. Ninguno la supera en la PR AUC, que es la métrica de ordenamiento que importa para armar un ranking, de modo que se mantiene por simple, calibrada y explicable. Con 270 alertas por mes, el punto elegido en la validación, captura el 83 % de los eventos y es la primera en exhaustividad entre los modelos. El detalle, y cómo correr el benchmark y verlo en MLflow, está en pipeline/README.md. El reporte del benchmark se publica junto con la herramienta, en la carpeta benchmark del sitio: es la misma dirección de la página seguida de benchmark/.
+La probabilidad de interferencia a tres meses sale de una regresión logística con el historial de vegetación, la vegetación de los últimos doce meses, las interrupciones de los últimos doce meses y la estacionalidad. No usa ninguna de las tres variables que el índice ya cuenta por su lado: reloj de poda, SAIDI y exposición por clientes y potencia. En la segunda revisión de la reunión N°3 se comparó con la regresión logística ponderada, el refuerzo de gradiente, Random Forest, XGBoost, LightGBM y SVM, y con variantes de la propia regresión logística. Ninguno la supera en la PR AUC, que es la métrica de ordenamiento que importa para armar un ranking, de modo que se mantiene por simple, calibrada y explicable. Con 270 alertas por mes, el punto elegido en la validación, captura el 83 % de los eventos y es la primera en exhaustividad entre los modelos. El detalle, y cómo correr el benchmark y verlo en MLflow, está en pipeline/README.md. El reporte del benchmark se abre con el botón Benchmark de la cabecera, o con la dirección de la página seguida de benchmark/.
 
 
 ## Arquitectura para la operación
@@ -96,21 +98,13 @@ Cuando llega un lote de Pluz se guarda en una carpeta nueva dentro de pipeline/d
 ```
 python pipeline/actualizar.py
 python pipeline/actualizar.py ver
-python pipeline/actualizar.py subir
 ```
 
-La primera orden valida el lote, monitorea el modelo vigente y lo recalibra si hace falta, predice los tres meses siguientes al último mes con datos, recalcula el índice de los ocho distritos y reescribe la carpeta data. La segunda abre la página para revisarla. La tercera la publica en GitHub, previa confirmación.
+La primera orden valida el lote, monitorea el modelo vigente y lo recalibra si hace falta, predice los tres meses siguientes al último mes con datos, recalcula el índice de los ocho distritos y reescribe la carpeta data. La segunda abre la página para revisarla.
 
-Los Excel de Pluz no se suben al repositorio. El repositorio es público porque lo sirve GitHub Pages, y el archivo .gitignore deja fuera los lotes y las salidas técnicas.
+También se puede hacer desde el navegador, sin escribir órdenes: python pipeline/cargar.py abre la página de carga semanal. Ahí se arrastra el archivo de la semana, se revisa qué trae, se actualiza la herramienta con un botón y, si el archivo se cargó mal, se vuelve a la configuración anterior con «Restaurar», previa confirmación. En la dirección publicada, cargar/ solo revisa el archivo dentro del navegador, sin enviarlo a ningún lado. El detalle está en pipeline/README.md.
 
-
-## Cómo se publica en GitHub Pages
-
-1. Subir el contenido de esta carpeta a la raíz de un repositorio, o a su carpeta docs.
-2. En Settings, Pages, elegir la rama y la carpeta correspondientes.
-3. El archivo .nojekyll ya está incluido para que las rutas se sirvan tal cual.
-
-No hace falta ningún paso de compilación ni ningún servidor de aplicaciones. Todas las rutas son relativas, de modo que la página funciona igual en la raíz del dominio que en una subcarpeta del proyecto.
+Los Excel de Pluz nunca se publican: se quedan en el equipo que corre el pipeline.
 
 
 ## Estructura
@@ -120,7 +114,7 @@ No hace falta ningún paso de compilación ni ningún servidor de aplicaciones. 
 * **js/app.js.** Lógica del mapa, la curva, la lista y las fichas del piloto.
 * **js/comparar.js.** Pestaña de comparación entre distritos.
 * **js/teselas.js.** Fondo satelital de los mapas, con las teselas de Esri.
-* **js/vendor.** Biblioteca D3, versión 7.9.0.
+* **js/vendor.** Biblioteca D3, versión 7.9.0, y SheetJS 0.18.5, que lee los Excel en la página de carga.
 * **data.** Lo que carga la página: criticidad del piloto, datos de los ocho distritos y geografía. Cada archivo va en dos copias con el mismo contenido: la de extensión js la carga la página, y la de extensión json sirve para reutilizar los datos.
 * **assets.** Logotipo completo, isotipo e icono de pestaña.
 * **pipeline.** Flujo de datos, del lote de Pluz a la carpeta data. Se documenta en pipeline/README.md.
@@ -131,7 +125,8 @@ No hace falta ningún paso de compilación ni ningún servidor de aplicaciones. 
 * **docs/FEEDBACK_REUNION3.md.** Todo lo que pidieron Pluz y el asesor desde la reunión N°3, con su estado.
 * **docs/Informe_Respuesta_Reunion3_Pluz.docx.** Informe para Pluz: las sugerencias atendidas, el modelo y sus variables, dónde acierta y dónde se equivoca, y los datos que hacen falta para escalar.
 * **papers.** Literatura que respalda cada decisión del método, en papers/README.md. Los PDF se quedan en el equipo.
-* **benchmark.** Reporte interactivo del benchmark de modelos, publicado como segundo enlace. Lo reescribe la orden benchmark del pipeline.
+* **benchmark.** Reporte interactivo del benchmark de modelos, que se abre con el botón Benchmark. Lo reescribe la orden benchmark del pipeline.
+* **cargar.** Página de carga semanal: revisa el archivo de la semana y, en el equipo del pipeline, actualiza la herramienta o deshace la última carga. Su archivo estado.json lleva solo conteos y métricas agregadas.
 
 
 ## Decisiones de diseño

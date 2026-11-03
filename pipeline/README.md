@@ -10,30 +10,41 @@ El recorrido completo es este:
 4. **Modelo.** Se predice el último mes con el modelo vigente, que se monitorea cada semana y se recalibra si hace falta.
 5. **Índice.** Se calcula por distrito, en dos niveles, y se escribe en la carpeta data.
 6. **Salidas.** Plan en Excel, reporte de la corrida y, si está configurada, la base de datos.
-7. **Publicación.** La carpeta data se sube a GitHub y la página se actualiza sola.
+7. **Publicación.** La página publicada pasa a mostrar los datos nuevos.
 
 
 ## Carga semanal desde el navegador
 
-La forma más corta de actualizar la herramienta con el archivo de la semana, sin abrir carpetas ni escribir órdenes:
+La página está en cargar/index.html y funciona de dos maneras.
+
+**En la dirección publicada (cargar/): solo revisión.** La página revisa el archivo dentro del navegador y no lo envía a ningún lado. Sirve para que el área confirme que el archivo de la semana viene bien antes de pasarlo. Los gráficos del modelo y la literatura salen de cargar/estado.json, que solo lleva conteos, periodos y métricas agregadas. Ese archivo se regenera solo en cada corrida que publica y en cada benchmark.
+
+**En el equipo del pipeline: validación, carga, actualización y deshacer.**
 
 ```
 python pipeline/cargar.py
 ```
 
-Se abre http://127.0.0.1:8050/ en el navegador, con la misma paleta y logotipo de la herramienta. Tiene tres pestañas:
+Abre http://127.0.0.1:8050/cargar/. Tiene tres pestañas.
 
-* **Cargar semana.** Arrastrar el archivo de la semana (o hacer clic para elegirlo). Acepta .xlsx y .csv.
-  * Si es Excel, la fuente se reconoce por el nombre, con los mismos patrones de config.py: «Interrupciones diarias ....xlsx» (hoja Falla_Alim), «PODA ... FORMATO UNIFICADO.xlsx», «GUIA ....xlsx» o «Ranking ... SAIDI ....xlsx».
-  * Si es CSV, se reconoce por sus columnas (por ejemplo Referencia, Inicio, Alimentador, Causa, Localización, SAIDI y N° Clientes para las interrupciones) y se convierte al Excel que espera el contrato, con su nombre y su hoja.
-  * El archivo se valida y se guarda en un lote nuevo, pipeline/datos/lotes/AAAAMMDD_carga. Si no cumple el contrato, la página dice qué falta y el lote se borra.
-  * La página muestra en gráficos chicos lo que trae: registros por semana, SAIDI por semana y alimentadores con más registros.
-  * **Actualizar la web** corre la actualización completa (la misma que python pipeline/actualizar.py), muestra el registro y abre la herramienta actualizada en http://127.0.0.1:8050/web/. **Descartar** borra el lote sin tocar nada.
-  * Debajo: indicadores de la última corrida, filas por fuente y lotes recibidos.
-* **Modelo y MLflow.** Se carga al abrir la página, leyendo directo de pipeline/salidas/mlflow.db: benchmark de modelos (PR AUC, con la regla por historial en amarillo), cobertura del 40 % en cada corrida, cobertura por tamaño de lista y la lectura del monitoreo del modelo vigente.
-* **Literatura.** Las fuentes de papers/README.md agrupadas por la decisión del proyecto que respaldan, con enlace al PDF cuando está en el equipo.
+* **Cargar semana.** Arrastrar el archivo de la semana, en .xlsx o .csv.
+  * La fuente se reconoce por el nombre, con los patrones de config.py. Si es CSV, o si el Excel trae otro nombre, se reconoce por las columnas.
+  * Se muestran los controles: columnas del contrato, fechas legibles y futuras, filas nuevas frente al último día ya cargado, filas sin alimentador, filas repetidas y SAIDI negativo. También gráficos chicos de registros por semana, SAIDI por semana y alimentadores con más registros.
+  * Si cumple el contrato, el servidor lo valida otra vez con pandas y lo guarda en un lote nuevo, pipeline/datos/lotes/AAAAMMDD_carga.
+  * **Actualizar la web** guarda primero un respaldo y luego corre la actualización completa, la misma de python pipeline/actualizar.py. Al terminar abre la herramienta con los datos nuevos. **Descartar** borra el lote antes de actualizar.
+* **Deshacer la última carga.** Aparece después de actualizar. «Restaurar la configuración anterior» pide una segunda confirmación y después:
+  * borra el lote de esa carga;
+  * devuelve data/, las salidas del modelo (reporte, modelo vigente, predicción, plan) y cargar/estado.json a como estaban;
+  * renueva la versión ?v= de los datos para que el navegador no muestre la copia vieja;
+  * abre la herramienta ya restaurada.
 
-Publicar en GitHub sigue siendo un paso aparte y con confirmación: python pipeline/actualizar.py subir. Para probar sin tocar los datos reales, correr la página en modo demostración: PLUZ_DEMO=pipeline/datos/demo python pipeline/cargar.py.
+  Se guardan las últimas cinco cargas en pipeline/salidas/respaldos y se deshacen de una en una, de la más reciente a la más antigua. Las corridas de MLflow no se borran: quedan como historial. Si la carga deshecha ya se había publicado, hay que volver a publicar para que la dirección publicada muestre la versión restaurada.
+* **Modelo y MLflow.** Benchmark de modelos con la regla por historial en amarillo, cobertura del 40 % en cada corrida, cobertura por tamaño de lista y lectura del monitoreo.
+* **Literatura.** Las fuentes de papers/README.md agrupadas por la decisión que respaldan, con enlace al PDF solo en local, porque los PDF no se publican.
+
+Publicar sigue siendo un paso aparte y con confirmación. Para probar sin tocar los datos reales: PLUZ_DEMO=pipeline/datos/demo python pipeline/cargar.py. En modo demostración tampoco se toca cargar/estado.json.
+
+La herramienta principal tiene en la cabecera un botón **Benchmark** que abre benchmark/.
 
 
 ## La rutina semanal
@@ -54,7 +65,7 @@ La guía completa de instalación y operación, con la tarea programada, la opci
    ```
    python pipeline/actualizar.py ver
    ```
-5. Publicar en GitHub, previa confirmación:
+5. Publicar, previa confirmación:
    ```
    python pipeline/actualizar.py subir
    ```
@@ -71,7 +82,7 @@ Todas las órdenes disponibles:
 * **calcular.** Corre todo, pero no toca la carpeta data.
 * **forzar.** Publica aunque el modelo quede por debajo de la regla por historial.
 * **ver.** Abre la página en el navegador, servida desde el propio equipo.
-* **subir.** Publica la carpeta data en GitHub.
+* **subir.** Publica la página con los datos nuevos, previa confirmación.
 * **geografia.** Vuelve a descargar los límites de los distritos de OpenStreetMap.
 * **semanal.** Lo que corre cada lunes: recibe el lote de la carpeta de entrada, corre todo y copia la página al servidor web interno. Es lo que ejecutan pipeline/programar/actualizar_semanal.bat en Windows y pipeline/programar/actualizar_semanal.sh en Linux, a mano o programados.
 * **recibir.** Solo arma el lote nuevo con lo que haya en la carpeta de entrada, PLUZ_CARPETA_ENTRADA, y mueve los originales a procesados.
@@ -139,7 +150,7 @@ En los datos de la página, el campo meses_sin_poda trae el número y el campo s
 
 ## Qué se publica y qué no
 
-El repositorio es público porque lo sirve GitHub Pages. Por eso el archivo .gitignore deja fuera de git la carpeta pipeline/datos, con los Excel originales de cada lote, y la carpeta pipeline/salidas, con la base analítica, la predicción, el modelo, el plan en Excel y el reporte. Sí se publican pipeline/referencia, con los límites de distritos de OpenStreetMap, y la carpeta data, que es lo que la página necesita para dibujarse.
+Los Excel originales de cada lote, en pipeline/datos, y las salidas técnicas, en pipeline/salidas (base analítica, predicción, modelo, plan en Excel, reporte y respaldos de carga), se quedan en el equipo que corre el pipeline y nunca se publican. Solo se publican la carpeta data, que es lo que la página necesita para dibujarse, pipeline/referencia, con los límites de distritos de OpenStreetMap, y cargar/estado.json, con conteos y métricas agregadas.
 
 
 ## Cambios frecuentes
@@ -156,7 +167,7 @@ python pipeline/actualizar.py benchmark
 python pipeline/actualizar.py mlflow
 ```
 
-La primera orden compara, con la misma partición temporal del pipeline, la regla por historial, la regresión logística vigente, la regresión logística ponderada, el refuerzo de gradiente de histograma, Random Forest, XGBoost, LightGBM y SVM. Los hiperparámetros de cada modelo y el punto de operación común se eligen en una validación interna, separada de la prueba por tres meses, y la prueba no interviene en ninguna elección. Escribe un reporte interactivo con D3 en pipeline/salidas/benchmark/benchmark_modelos.html, que se abre sin conexión, deja una copia en la carpeta benchmark de la raíz para publicarla en GitHub Pages como segundo enlace, y registra cada modelo en MLflow. La segunda orden abre MLflow en el navegador.
+La primera orden compara, con la misma partición temporal del pipeline, la regla por historial, la regresión logística vigente, la regresión logística ponderada, el refuerzo de gradiente de histograma, Random Forest, XGBoost, LightGBM y SVM. Los hiperparámetros de cada modelo y el punto de operación común se eligen en una validación interna, separada de la prueba por tres meses, y la prueba no interviene en ninguna elección. Escribe un reporte interactivo con D3 en pipeline/salidas/benchmark/benchmark_modelos.html, que se abre sin conexión, deja una copia en la carpeta benchmark de la raíz, que se publica junto con la herramienta y se abre con su botón Benchmark, y registra cada modelo en MLflow. La segunda orden abre MLflow en el navegador.
 
 El reporte incluye la tabla de métricas (ROC AUC, PR AUC, Brier, pérdida logarítmica, precisión, exhaustividad, F1, F2 y cobertura de las listas de 20, 40 y 80), las curvas ROC y de precisión y exhaustividad, la calibración, las curvas de pérdida por iteración y de aprendizaje, las matrices de confusión, la correlación entre las variables del modelo y las del índice, el aporte de cada bloque de variables y ejemplos reales de verdaderos y falsos positivos y negativos contrastados con lo que pasó.
 
