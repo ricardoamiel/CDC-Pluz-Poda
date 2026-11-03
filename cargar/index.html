@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carga semanal Pluz</title>
+<meta name="description" content="Validación de la carga semanal de datos de Pluz Energía y seguimiento del modelo de priorización de poda.">
+<meta name="theme-color" content="#395aa1">
+<link rel="icon" href="../assets/favicon.png" type="image/png">
+<!-- La misma hoja de estilos de la herramienta: paleta del logotipo, cabecera y paneles.
+     Rutas relativas para que funcione igual publicada y en local. -->
+<link rel="stylesheet" href="../css/estilos.css">
+<style>
+  .viz-root { padding: 20px 16px 40px; }
+  .vista { max-width: 1440px; margin: 0 auto; display: grid; gap: 16px; }
+  .vista[hidden] { display: none; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+  .kpi { background: var(--superficie-2); border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra); padding: 12px 16px; position: relative; overflow: hidden; }
+  .kpi::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--k, var(--pluz-azul)); }
+  .kpi small { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-3); font-weight: 600; }
+  .kpi b { font-size: 22px; color: var(--tinta); }
+  .kpi span { display: block; font-size: 12px; color: var(--tinta-2); }
+  .modo { max-width: 1440px; margin: 0 auto 16px; font-size: 12.5px; color: var(--tinta-2); background: var(--azul-050); border: 1px solid var(--borde); border-radius: var(--radio-s); padding: 9px 14px; }
+  .modo b { color: var(--azul-700); }
+  .zona { display: block; border: 2px dashed var(--borde-fuerte); border-radius: var(--radio); padding: 34px 18px; text-align: center; cursor: pointer; background: var(--azul-050); color: var(--tinta-2); font-size: 14px; transition: .15s; }
+  .zona strong { color: var(--azul-600); }
+  .zona.sobre { border-color: var(--pluz-azul); background: var(--azul-100); }
+  .estado-carga { font-size: 13px; color: var(--tinta-2); margin: 12px 0 0; }
+  .ok { color: var(--ok); font-weight: 700; } .er { color: var(--critico); font-weight: 700; } .av { color: var(--aviso); font-weight: 700; }
+  .rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr)); gap: 16px; }
+  .mini { border: 1px solid var(--borde); border-radius: var(--radio-s); padding: 10px 12px; background: var(--superficie-2); }
+  .mini h3 { font-size: 12px; margin: 0 0 6px; color: var(--tinta-2); }
+  .mini p { font-size: 11px; color: var(--tinta-3); margin: 4px 0 0; }
+  .mini svg, .grafico svg { width: 100%; height: auto; display: block; }
+  .controles { list-style: none; padding: 0; margin: 0 0 14px; display: grid; gap: 6px; }
+  .controles li { font-size: 13px; color: var(--tinta-2); padding: 7px 12px; border-radius: var(--radio-s); background: var(--superficie-3); border-left: 4px solid var(--borde-fuerte); }
+  .controles li.ok { border-left-color: var(--ok); background: var(--ok-suave); font-weight: 400; color: var(--tinta-2); }
+  .controles li.av { border-left-color: var(--pluz-amarillo); font-weight: 400; color: var(--tinta-2); }
+  .controles li.er { border-left-color: var(--critico); font-weight: 400; color: var(--tinta); }
+  .controles li b { color: var(--tinta); }
+  .acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  pre.log { font-size: 11px; background: var(--superficie-3); border: 1px solid var(--borde); border-radius: var(--radio-s); padding: 12px; max-height: 280px; overflow: auto; white-space: pre-wrap; color: var(--tinta-2); }
+  .eje { font-size: 10px; fill: var(--tinta-3); font-family: inherit; }
+  .valor { font-size: 10px; fill: var(--tinta-2); font-weight: 600; font-family: inherit; }
+  .leyenda { display: flex; gap: 14px; font-size: 12px; color: var(--tinta-2); margin-top: 6px; flex-wrap: wrap; }
+  .leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .nota { font-size: 12.5px; color: var(--tinta-2); margin: 6px 0 0; }
+  .lit h3 { font-size: 14px; margin: 18px 0 8px; color: var(--azul-700); }
+  .lit h3:first-child { margin-top: 0; }
+  .lit ul { margin: 0; padding-left: 18px; }
+  .lit li { font-size: 13px; color: var(--tinta-2); margin-bottom: 8px; line-height: 1.45; }
+  .lit li b { color: var(--tinta); }
+  .lit a { color: var(--azul-600); font-weight: 600; text-decoration: none; font-size: 12px; margin-left: 4px; }
+  .lit a:hover { text-decoration: underline; }
+  .deshacer { border-left: 4px solid var(--pluz-amarillo); }
+  .confirmar { margin-top: 12px; padding: 14px 16px; border-radius: var(--radio-s); background: #fdf1ef; border: 1px solid #f0c4bf; }
+  .confirmar p { margin: 0 0 10px; font-size: 13px; color: var(--tinta); line-height: 1.5; }
+  .boton-peligro { background: var(--critico); border-color: var(--critico); color: #fff; }
+  .boton-peligro:hover { background: #8f1d17; border-color: #8f1d17; }
+  .lotes { display: flex; gap: 6px; flex-wrap: wrap; }
+  .lotes .sello { font-size: 11.5px; }
+  .lotes .sello.nuevo { background: var(--ok-suave); color: var(--ok); }
+</style>
+</head>
+<body>
+<div class="viz-root">
+
+  <header class="cabecera">
+    <div class="marca">
+      <img class="marca-logo" src="../assets/pluz-logo.png" alt="Pluz Energía" width="491" height="250">
+      <span class="marca-barra" aria-hidden="true"></span>
+      <div class="marca-texto">
+        <p class="sobretitulo">Subgerencia MT&nbsp;/&nbsp;BT · Gestión de vegetación en red aérea</p>
+        <h1>Carga semanal de datos</h1>
+        <p class="subtitulo">Corte vigente <strong id="corte">-</strong> · ventana de <strong id="ventana">-</strong></p>
+      </div>
+    </div>
+    <div class="cabecera-acciones">
+      <span class="sello" id="sello">Última corrida -</span>
+      <a class="boton boton-principal" id="abrir-web" href="../" target="_blank" style="text-decoration:none">Abrir la herramienta</a>
+    </div>
+  </header>
+
+  <p class="modo" id="modo">Cargando…</p>
+
+  <nav class="pestanas" role="tablist">
+    <button type="button" role="tab" data-vista="cargar" class="activa" aria-selected="true">Cargar semana</button>
+    <button type="button" role="tab" data-vista="modelo" aria-selected="false">Modelo y MLflow</button>
+    <button type="button" role="tab" data-vista="literatura" aria-selected="false">Literatura</button>
+  </nav>
+
+  <!-- ===================================================== cargar -->
+  <section class="vista" id="vista-cargar">
+    <div class="kpis" id="kpis"></div>
+
+    <div class="panel">
+      <div class="panel-cabecera"><h2>1. Subir el archivo de la semana</h2>
+        <p class="nota">Interrupciones diarias (hoja Falla_Alim), poda en formato unificado, guía de subestaciones o ranking SAIDI, en .xlsx o .csv. Se revisa contra el contrato de datos del pipeline.</p></div>
+      <label class="zona" id="zona"><strong>Arrastre el archivo aquí</strong> o haga clic para elegirlo
+        <input type="file" id="archivo" accept=".xlsx,.xls,.csv" hidden>
+      </label>
+      <p class="estado-carga" id="info"></p>
+    </div>
+
+    <div class="panel" id="panel-nuevo" hidden>
+      <div class="panel-cabecera"><h2>2. Validación y contenido</h2><p class="nota" id="nota-nuevo"></p></div>
+      <ul class="controles" id="controles"></ul>
+      <div class="rejilla" id="graficos"></div>
+      <div class="acciones" id="acciones" hidden>
+        <button class="boton boton-principal" id="actualizar" type="button">Actualizar la web</button>
+        <button class="boton" id="descartar" type="button">Descartar</button>
+      </div>
+      <pre class="log" id="log" hidden></pre>
+    </div>
+
+    <div class="panel deshacer" id="panel-deshacer" hidden>
+      <div class="panel-cabecera"><h2>Deshacer la última carga</h2>
+        <p class="nota">Si el archivo de la semana se cargó mal, vuelva a la configuración anterior: se borra ese lote y la herramienta muestra otra vez los datos previos.</p></div>
+      <p class="nota" id="ultima-carga"></p>
+      <div class="acciones"><button class="boton" id="restaurar" type="button">Restaurar la configuración anterior</button></div>
+      <div class="confirmar" id="confirmar" hidden>
+        <p id="texto-confirmar"></p>
+        <div class="acciones" style="margin-top:0">
+          <button class="boton boton-peligro" id="restaurar-si" type="button">Sí, deshacer la carga</button>
+          <button class="boton" id="restaurar-no" type="button">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="dos">
+      <div class="panel"><div class="panel-cabecera"><h2>Fuentes usadas en la última corrida</h2><p class="nota">Filas que entraron al modelo por fuente.</p></div><div class="grafico" id="g-fuentes"></div></div>
+      <div class="panel" id="panel-lotes"><div class="panel-cabecera"><h2>Lotes recibidos</h2><p class="nota">Cada lote es una carpeta; el más reciente manda sobre su periodo.</p></div><div class="lotes" id="lotes"></div></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== modelo -->
+  <section class="vista" id="vista-modelo" hidden>
+    <div class="dos">
+      <div class="panel"><div class="panel-cabecera"><h2>Benchmark de modelos</h2><p class="nota">Precisión promedio fuera de muestra (PR AUC). En amarillo, la regla por historial que el modelo tiene que igualar o superar. <a href="../benchmark/" target="_blank">Ver reporte completo</a>.</p></div><div class="grafico" id="g-bench"></div></div>
+      <div class="panel"><div class="panel-cabecera"><h2>Validación en cada corrida</h2><p class="nota">Cobertura de eventos con el 40&nbsp;% de alimentadores priorizados, modelo frente a regla. Registrado en MLflow, experimento pluz_modelo_vigente.</p></div><div class="grafico" id="g-hist"></div>
+        <div class="leyenda"><span><i style="background:var(--pluz-azul)"></i>Modelo</span><span><i style="background:var(--pluz-amarillo)"></i>Regla por historial</span></div></div>
+    </div>
+    <div class="dos">
+      <div class="panel"><div class="panel-cabecera"><h2>Cobertura por tamaño de lista</h2><p class="nota">Porcentaje de eventos de la prueba que caen en la lista priorizada.</p></div><div class="grafico" id="g-cob"></div>
+        <div class="leyenda"><span><i style="background:var(--pluz-azul)"></i>Modelo</span><span><i style="background:var(--pluz-amarillo)"></i>Regla por historial</span></div></div>
+      <div class="panel"><div class="panel-cabecera"><h2>Monitoreo del modelo vigente</h2></div><p class="nota" id="monitoreo"></p></div>
+    </div>
+  </section>
+
+  <!-- ===================================================== literatura -->
+  <section class="vista" id="vista-literatura" hidden>
+    <div class="panel lit"><div class="panel-cabecera"><h2>Literatura que respalda el método</h2><p class="nota">Cada decisión del proyecto con la fuente que la sustenta (papers/README.md).</p></div><div id="lit"></div></div>
+  </section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.querySelector(".viz-root")).getPropertyValue(n).trim();
+const pct = v => v == null ? "-" : (v * 100).toFixed(1).replace(".", ",") + " %";
+const num = v => { const [e, d] = String(Math.round(Number(v) * 100) / 100).split("."); return e.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + (d ? "," + d : ""); };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const dia = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;   // fecha local, no UTC
+let ESTADO = null, LOCAL = false, lote = null;
+
+// ------------------------------------------------------------------ pestañas
+document.querySelectorAll(".pestanas button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".pestanas button").forEach(x => { x.classList.toggle("activa", x === b); x.setAttribute("aria-selected", x === b); });
+  document.querySelectorAll(".vista").forEach(v => v.hidden = v.id !== "vista-" + b.dataset.vista);
+});
+
+// ------------------------------------------------------------------ gráficos
+function mini(g, color) {
+  const W = 230, H = 90, n = g.valores.length, max = Math.max(...g.valores, 1), bw = W / Math.max(n, 1);
+  const barras = g.valores.map((v, i) => { const h = (v / max) * (H - 6);
+    return `<rect x="${i*bw+1}" y="${H-h}" width="${Math.max(bw-2,1)}" height="${h}" rx="2" fill="${color}"><title>${esc(g.etiquetas[i])}: ${num(v)}</title></rect>`; }).join("");
+  const total = g.valores.reduce((a, b) => a + b, 0);
+  return `<div class="mini"><h3>${esc(g.titulo)}</h3><svg viewBox="0 0 ${W} ${H}">${barras}</svg>
+    <p>${esc(g.etiquetas[0] ?? "")} … ${esc(g.etiquetas[n-1] ?? "")} · total ${num(total)}</p></div>`;
+}
+
+function barrasH(items, destacar) {
+  const W = 460, fila = 24, izq = 170, H = items.length * fila + 4, max = Math.max(...items.map(i => i.v), 1e-9);
+  return `<svg viewBox="0 0 ${W} ${H}">` + items.map((it, k) => { const w = (it.v / max) * (W - izq - 60), y = k * fila + 2;
+    const col = destacar(it) || css("--pluz-azul");
+    return `<text class="eje" x="${izq-8}" y="${y+15}" text-anchor="end">${esc(it.e)}</text>
+      <rect x="${izq}" y="${y+3}" width="${w}" height="${fila-8}" rx="3" fill="${col}"><title>${esc(it.e)}: ${it.t}</title></rect>
+      <text class="valor" x="${izq+w+6}" y="${y+15}">${it.t}</text>`; }).join("") + "</svg>";
+}
+
+function pares(etiquetas, a, b, fmt) {
+  const W = 460, H = 170, pie = 22, n = etiquetas.length, gw = W / n, max = Math.max(...a, ...b, 1e-9);
+  const azul = css("--pluz-azul"), amar = css("--pluz-amarillo");
+  return `<svg viewBox="0 0 ${W} ${H}"><line x1="0" x2="${W}" y1="${H-pie}" y2="${H-pie}" stroke="${css("--borde-fuerte")}"/>` +
+    etiquetas.map((e, i) => { const x = i * gw, bw = Math.min(26, gw * .3);
+      const h1 = a[i] / max * (H - pie - 18), h2 = b[i] / max * (H - pie - 18), c = x + gw / 2;
+      return `<rect x="${c-bw-4}" y="${H-pie-h1}" width="${bw}" height="${h1}" rx="2" fill="${azul}"><title>Modelo: ${fmt(a[i])}</title></rect>
+        <rect x="${c+4}" y="${H-pie-h2}" width="${bw}" height="${h2}" rx="2" fill="${amar}"><title>Regla: ${fmt(b[i])}</title></rect>
+        <text class="valor" x="${c-bw/2-4}" y="${H-pie-h1-4}" text-anchor="middle" style="font-size:9px">${fmt(a[i])}</text>
+        <text class="valor" x="${c+bw/2+4}" y="${H-pie-h2-4}" text-anchor="middle" style="font-size:9px">${fmt(b[i])}</text>
+        <text class="eje" x="${c}" y="${H-6}" text-anchor="middle">${esc(e)}</text>`; }).join("") + "</svg>";
+}
+
+const kpi = (titulo, valor, detalle, color) =>
+  `<div class="kpi" style="--k:${color || "var(--pluz-azul)"}"><small>${titulo}</small><b>${valor}</b><span>${detalle || ""}</span></div>`;
+
+// ------------------------------------------------------------------ estado: local o estático
+async function obtenerEstado() {
+  // Servida por pipeline/cargar.py hay API; publicada, solo está la foto estado.json.
+  try { const r = await fetch("../api/estado", { cache: "no-store" }); if (r.ok) return await r.json(); } catch (e) {}
+  const r = await fetch("estado.json", { cache: "no-store" });
+  if (!r.ok) throw new Error("No se encontró estado.json");
+  return await r.json();
+}
+
+async function cargarEstado(nuevo) {
+  let d;
+  try { d = await obtenerEstado(); } catch (e) { $("modo").innerHTML = `<span class="er">No se pudo leer el estado: ${esc(e.message)}</span>`; return; }
+  ESTADO = d; LOCAL = d.modo === "local";
+  $("modo").innerHTML = LOCAL
+    ? "<b>Modo local.</b> El archivo se valida, se guarda como lote nuevo y la web se actualiza desde este equipo."
+    : "<b>Vista de validación.</b> El archivo se revisa dentro de su navegador y no se envía a ningún servidor. Para incorporarlo a la herramienta, abra esta página en el equipo del pipeline con <code>python pipeline/cargar.py</code>.";
+  $("abrir-web").href = d.web || "../";
+  $("panel-lotes").hidden = !LOCAL;
+  const ult = (d.respaldos || [])[0];
+  $("panel-deshacer").hidden = !(LOCAL && ult);
+  $("confirmar").hidden = true;
+  if (ult) $("ultima-carga").innerHTML = `Última carga: lote <b>${esc(ult.lote || "-")}</b>, actualizada el ${esc(ult.fecha)}. Antes de ella la herramienta estaba en el corte <b>${esc(ult.corte_previo || "-")}</b> (corrida ${esc(ult.corrida_previa || "-")}).` +
+    ((d.respaldos || []).length > 1 ? ` Se pueden deshacer ${d.respaldos.length} cargas, una por vez.` : "");
+  const r = d.reporte || {}, v = r.validacion || {}, m = v.modelo || {}, g = v.regla || {}, f = d.fuentes || {};
+  $("corte").textContent = r.corte || "-"; $("ventana").textContent = r.ventana || "-";
+  $("sello").textContent = "Última corrida " + (r.fecha || "-");
+  const per = f.periodo_interrupciones || [];
+  $("kpis").innerHTML =
+    kpi("Interrupciones", f.interrupciones ? num(f.interrupciones.filas) : "-", per.length ? `del ${per[0]} al ${per[1]}` : "") +
+    kpi("Registros de poda", f.poda ? num(f.poda.filas) : "-", (f.periodo_poda || []).join(" al "), "var(--pluz-verde)") +
+    kpi("PR AUC modelo", m.ap != null ? m.ap.toFixed(3).replace(".", ",") : "-", "regla " + (g.ap != null ? g.ap.toFixed(3).replace(".", ",") : "-")) +
+    kpi("Cobertura con 40 %", pct(m.cobertura_40), "regla " + pct(g.cobertura_40), "var(--pluz-amarillo)") +
+    kpi("Publicado", r.publicado ? "Sí" : "No", LOCAL ? (d.lotes || []).length + " lotes" : "", r.publicado ? "var(--ok)" : "var(--critico)");
+
+  const fuentes = Object.entries(f).filter(([k, x]) => x && typeof x === "object" && !Array.isArray(x) && x.filas)
+    .map(([k, x]) => ({ e: k.replace(/_/g, " "), v: x.filas, t: num(x.filas) }));
+  $("g-fuentes").innerHTML = fuentes.length ? barrasH(fuentes, () => null) : "<p class='nota'>Sin corrida todavía.</p>";
+  $("lotes").innerHTML = (d.lotes || []).map(l => `<span class="sello ${l === nuevo ? "nuevo" : ""}">${esc(l)}</span>`).join("");
+
+  const ml = d.mlflow || {};
+  const bench = (ml.benchmark || []).map(x => ({ e: x.nombre, v: x.metricas.pr_auc, t: x.metricas.pr_auc.toFixed(3).replace(".", ",") })).sort((a, b) => b.v - a.v);
+  $("g-bench").innerHTML = bench.length ? barrasH(bench, it => /regla/i.test(it.e) ? css("--pluz-amarillo") : null) : "<p class='nota'>Sin benchmark registrado. Corra: python pipeline/actualizar.py benchmark</p>";
+  const hist = (ml.vigente || []).filter(x => "validacion_cobertura_40_modelo" in x.metricas).slice(-6);
+  $("g-hist").innerHTML = hist.length ? pares(hist.map(x => new Date(x.inicio).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit" })),
+    hist.map(x => x.metricas.validacion_cobertura_40_modelo), hist.map(x => x.metricas.validacion_cobertura_40_regla), pct) : "<p class='nota'>Sin corridas en MLflow.</p>";
+  $("g-cob").innerHTML = m.cobertura_20 != null ? pares(["20 %", "40 %", "80 %"], [m.cobertura_20, m.cobertura_40, m.cobertura_80], [g.cobertura_20, g.cobertura_40, g.cobertura_80], pct) : "";
+  const mo = r.monitoreo || {};
+  $("monitoreo").innerHTML = `${esc(mo.lectura || "Sin datos de monitoreo.")}<br><br>Meses nuevos monitoreados: <b>${mo.meses_nuevos ?? 0}</b> · Recalibrar: <b>${mo.recalibrar ? "sí" : "no"}</b> · Reentrenamiento recomendado: <b>${mo.reentrenamiento_recomendado ? "sí" : "no"}</b>`;
+
+  $("lit").innerHTML = (d.literatura || []).map(gr => `<h3>${esc(gr.decision)}</h3><ul>` +
+    gr.fuentes.map(s => `<li><b>${esc(s.autor)}.</b> ${esc(s.nota)}${s.pdf ? ` <a href="../papers/${encodeURIComponent(s.pdf)}" target="_blank">PDF</a>` : ""}</li>`).join("") + "</ul>").join("");
+}
+
+// ------------------------------------------------------------------ lectura del archivo
+const normalizar = s => String(s).normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const comodin = p => new RegExp("^" + normalizar(p).replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
+
+function leerCSV(texto) {
+  texto = texto.replace(/^﻿/, "");
+  const primera = texto.slice(0, texto.indexOf("\n") + 1 || texto.length);
+  const sep = [",", ";", "\t", "|"].sort((a, b) => primera.split(b).length - primera.split(a).length)[0];
+  const filas = []; let fila = [], campo = "", comillas = false;
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto[i];
+    if (comillas) { if (c === '"') { if (texto[i+1] === '"') { campo += '"'; i++; } else comillas = false; } else campo += c; }
+    else if (c === '"') comillas = true;
+    else if (c === sep) { fila.push(campo); campo = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && texto[i+1] === "\n") i++; fila.push(campo); filas.push(fila); fila = []; campo = ""; }
+    else campo += c;
+  }
+  if (campo !== "" || fila.length) { fila.push(campo); filas.push(fila); }
+  return filas.filter(f => f.some(x => String(x).trim() !== ""));
+}
+
+function cargarSheetJS() {
+  if (window.XLSX) return Promise.resolve();
+  return new Promise((ok, mal) => { const s = document.createElement("script");
+    s.src = "../js/vendor/xlsx.full.0.18.5.min.js"; s.onload = ok; s.onerror = () => mal(new Error("No se pudo cargar el lector de Excel")); document.head.appendChild(s); });
+}
+
+// Fila de títulos y objetos por fila, con la misma regla que pipeline/etapas/fuentes.py
+function tabla(filas, esp) {
+  let enc = 0;
+  if (esp.encabezado === "auto") {
+    enc = filas.slice(0, 20).findIndex(f => esp.columnas.slice(0, 2).every(c => f.map(x => String(x ?? "").trim()).includes(c)));
+    if (enc < 0) throw new Error(`No se encontró la fila de títulos con ${esp.columnas.slice(0, 2).join(" y ")}`);
+  } else if (Number.isInteger(esp.encabezado)) enc = esp.encabezado;
+  const titulos = (filas[enc] || []).map(x => String(x ?? "").trim());
+  return { titulos, datos: filas.slice(enc + 1).map(f => Object.fromEntries(titulos.map((t, i) => [t, f[i]]))) };
+}
+
+async function leerArchivo(f) {
+  const contrato = ESTADO.contrato, ext = f.name.split(".").pop().toLowerCase();
+  let fuente = Object.keys(contrato).find(k => contrato[k].patrones.some(p => comodin(p).test(normalizar(f.name))));
+  if (ext === "csv") {
+    const filas = leerCSV(await f.text()), titulos = (filas[0] || []).map(x => String(x).trim());
+    fuente = fuente || Object.keys(contrato).find(k => contrato[k].columnas.every(c => titulos.includes(c)));
+    if (!fuente) throw new Error(`Las columnas no coinciden con ninguna fuente del contrato. Columnas recibidas: ${titulos.slice(0, 12).join(", ")}`);
+    return { fuente, ...tabla(filas, { ...contrato[fuente], encabezado: 0 }), hojas: null };
+  }
+  await cargarSheetJS();
+  const libro = XLSX.read(await f.arrayBuffer(), { cellDates: true });
+  const hojaDe = n => XLSX.utils.sheet_to_json(libro.Sheets[n], { header: 1, raw: true, defval: null });
+  if (!fuente) {   // nombre distinto al acordado: se intenta por columnas en la primera hoja
+    const t = hojaDe(libro.SheetNames[0]).slice(0, 20).map(f => f.map(x => String(x ?? "").trim()));
+    fuente = Object.keys(contrato).find(k => t.some(f => contrato[k].columnas.every(c => f.includes(c))));
+    if (!fuente) throw new Error("El nombre no coincide con ninguna fuente y las columnas tampoco. Ejemplo esperado: «Interrupciones diarias ....xlsx».");
+  }
+  const esp = contrato[fuente];
+  let hojas = esp.hoja === null ? libro.SheetNames : [typeof esp.hoja === "string" ? esp.hoja : libro.SheetNames[esp.hoja || 0]];
+  if (typeof esp.hoja === "string" && !libro.SheetNames.includes(esp.hoja))
+    throw new Error(`No tiene la hoja «${esp.hoja}». Hojas del archivo: ${libro.SheetNames.join(", ")}`);
+  let titulos = [], datos = [];
+  for (const h of hojas) { const t = tabla(hojaDe(h), esp); titulos = [...new Set([...titulos, ...t.titulos])]; datos = datos.concat(t.datos); }
+  return { fuente, titulos, datos, hojas };
+}
+
+function aFecha(v) {
+  if (v == null || v === "") return null;
+  if (v instanceof Date) return isNaN(v) ? null : v;
+  if (typeof v === "number") return new Date(Math.round((v - 25569) * 864e5));   // número de serie de Excel
+  const s = String(v).trim(), m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  const d = m ? new Date(+m[3], m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0)) : new Date(s.replace(" ", "T"));
+  return isNaN(d) ? null : d;
+}
+
+// ------------------------------------------------------------------ validación
+function validar(r) {
+  const esp = ESTADO.contrato[r.fuente], ctl = [], graficos = [], n = r.datos.length;
+  const faltan = esp.columnas.filter(c => !r.titulos.includes(c));
+  if (faltan.length) { ctl.push(["er", `Faltan columnas del contrato: <b>${faltan.map(esc).join(", ")}</b>`]); return { ctl, graficos, error: true }; }
+  ctl.push(["ok", `Tiene las ${esp.columnas.length} columnas del contrato de <b>${esc(r.fuente.replace(/_/g, " "))}</b>` + (r.hojas ? ` (hojas: ${r.hojas.map(esc).join(", ")})` : "")]);
+  if (!n) { ctl.push(["er", "El archivo no tiene filas de datos."]); return { ctl, graficos, error: true }; }
+
+  let error = false, extra = {};
+  if (esp.fecha) {
+    const fechas = r.datos.map(x => aFecha(x[esp.fecha])), validas = fechas.filter(Boolean);
+    const malas = n - validas.length;
+    if (!validas.length) { ctl.push(["er", `Ninguna fecha legible en la columna ${esc(esp.fecha)}.`]); return { ctl, graficos, error: true }; }
+    const min = new Date(Math.min(...validas)), max = new Date(Math.max(...validas));
+    extra = { desde: dia(min), hasta: dia(max) };
+    ctl.push([malas ? "av" : "ok", malas ? `<b>${num(malas)}</b> filas sin fecha legible en ${esc(esp.fecha)}: el pipeline las descarta.` : `Todas las fechas se leen bien (${extra.desde} al ${extra.hasta}).`]);
+    const futuras = validas.filter(d => d > new Date()).length;
+    if (futuras) ctl.push(["av", `<b>${num(futuras)}</b> filas con fecha futura.`]);
+    if (max - min > 45 * 864e5) ctl.push(["av", `Cubre ${Math.round((max - min) / 864e5)} días: más que una semana. Si es el histórico completo está bien, el lote nuevo manda sobre su periodo.`]);
+    // Contra lo ya cargado en la última corrida
+    const per = (ESTADO.fuentes || {})["periodo_" + r.fuente];
+    if (per) {
+      const fin = new Date(per[1] + "T23:59:59"), nuevas = validas.filter(d => d > fin).length;
+      ctl.push([nuevas ? "ok" : "av", nuevas
+        ? `<b>${num(nuevas)}</b> filas nuevas después del ${per[1]}, último día ya cargado. ${n - malas - nuevas ? num(n - malas - nuevas) + " filas caen en el periodo ya cargado y lo reemplazan." : ""}`
+        : `Ninguna fila es posterior al ${per[1]}: el archivo solo repite o corrige un periodo ya cargado, y lo reemplaza.`]);
+    }
+    // Registros por semana, de lunes a domingo
+    const lunes = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x.getTime(); };
+    const sem = new Map(), saidi = new Map();
+    r.datos.forEach((x, i) => { if (!fechas[i]) return; const k = lunes(fechas[i]); sem.set(k, (sem.get(k) || 0) + 1);
+      if ("SAIDI" in x) saidi.set(k, (saidi.get(k) || 0) + (parseFloat(String(x.SAIDI).replace(",", ".")) || 0)); });
+    const claves = [...sem.keys()].sort((a, b) => a - b), et = claves.map(k => new Date(k).toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit" }));
+    graficos.push({ titulo: "Registros por semana", etiquetas: et, valores: claves.map(k => sem.get(k)) });
+    if (saidi.size) graficos.push({ titulo: "SAIDI sumado por semana", etiquetas: et, valores: claves.map(k => Math.round((saidi.get(k) || 0) * 1000) / 1000) });
+  }
+  const colAlim = ["Alimentador", "ALIMENTADOR", "ALIM"].find(c => r.titulos.includes(c));
+  if (colAlim) {
+    const vacios = r.datos.filter(x => x[colAlim] == null || String(x[colAlim]).trim() === "").length;
+    ctl.push([vacios ? "av" : "ok", vacios ? `<b>${num(vacios)}</b> filas sin alimentador: no se pueden asignar a una unidad.` : "Todas las filas tienen alimentador."]);
+    const cuenta = new Map(); r.datos.forEach(x => { const a = String(x[colAlim] ?? "").trim(); if (a) cuenta.set(a, (cuenta.get(a) || 0) + 1); });
+    const top = [...cuenta].sort((a, b) => b[1] - a[1]).slice(0, 10);
+    graficos.push({ titulo: `Alimentadores con más registros (${num(cuenta.size)} distintos)`, etiquetas: top.map(t => t[0]), valores: top.map(t => t[1]) });
+  }
+  if (r.titulos.includes("SAIDI")) {
+    const neg = r.datos.filter(x => parseFloat(String(x.SAIDI).replace(",", ".")) < 0).length;
+    if (neg) ctl.push(["av", `<b>${num(neg)}</b> filas con SAIDI negativo.`]);
+  }
+  // Repetida = igual en todas las columnas del contrato (Referencia es una categoría, no un código único).
+  const firmas = r.datos.map(x => JSON.stringify(esp.columnas.map(c => x[c] instanceof Date ? x[c].getTime() : String(x[c] ?? "").trim())));
+  const dup = firmas.length - new Set(firmas).size;
+  ctl.push([dup ? "av" : "ok", dup ? `<b>${num(dup)}</b> filas repetidas en todas las columnas del contrato.` : "Sin filas repetidas."]);
+  if (r.titulos.includes("DISTRITO")) {
+    const cuenta = new Map(); r.datos.forEach(x => { const a = String(x.DISTRITO ?? "").trim(); if (a) cuenta.set(a, (cuenta.get(a) || 0) + 1); });
+    const top = [...cuenta].sort((a, b) => b[1] - a[1]).slice(0, 10);
+    graficos.push({ titulo: "Registros por distrito", etiquetas: top.map(t => t[0]), valores: top.map(t => t[1]) });
+  }
+  return { ctl, graficos, error, ...extra };
+}
+
+// ------------------------------------------------------------------ flujo de carga
+async function subir(f) {
+  $("info").textContent = `Revisando ${f.name}…`; $("panel-nuevo").hidden = true; $("log").hidden = true; $("acciones").hidden = true; lote = null;
+  let r, v;
+  try { r = await leerArchivo(f); v = validar(r); }
+  catch (e) { $("info").innerHTML = `<span class="er">No se pudo leer el archivo.</span> ${esc(e.message)}`; return; }
+  $("nota-nuevo").innerHTML = `${esc(f.name)} · fuente <b>${esc(r.fuente.replace(/_/g, " "))}</b> · ${num(r.datos.length)} filas` + (v.desde ? ` · del ${v.desde} al ${v.hasta}` : "");
+  $("controles").innerHTML = v.ctl.map(([n, t]) => `<li class="${n}">${t}</li>`).join("");
+  const colores = [css("--pluz-azul"), css("--pluz-amarillo"), css("--pluz-verde"), css("--comp-3")];
+  $("graficos").innerHTML = v.graficos.map((g, i) => mini(g, colores[i % 4])).join("");
+  $("panel-nuevo").hidden = false;
+  const avisos = v.ctl.filter(c => c[0] === "av").length;
+  if (v.error) { $("info").innerHTML = `<span class="er">El archivo no cumple el contrato de datos.</span>`; return; }
+  $("info").innerHTML = `<span class="ok">Archivo válido</span>${avisos ? `, con <span class="av">${avisos} aviso${avisos > 1 ? "s" : ""}</span>` : ""}.`;
+  if (!LOCAL) return;
+
+  // En local, el servidor vuelve a validar con pandas y guarda el lote.
+  const s = await fetch("../api/subir", { method: "POST", headers: { "X-Nombre": encodeURIComponent(f.name) }, body: f });
+  const d = await s.json();
+  if (!s.ok) { $("info").innerHTML = `<span class="er">El pipeline rechazó el archivo:</span> ${esc(d.error)}`; return; }
+  lote = d.lote;
+  $("info").innerHTML += ` Guardado en el lote <b>${esc(d.lote)}</b> (el pipeline leyó ${num(d.filas)} filas).`;
+  $("acciones").hidden = false;
+  cargarEstado(lote);
+}
+
+$("archivo").onchange = e => { e.target.files[0] && subir(e.target.files[0]); e.target.value = ""; };
+const z = $("zona");
+z.ondragover = e => { e.preventDefault(); z.classList.add("sobre"); };
+z.ondragleave = () => z.classList.remove("sobre");
+z.ondrop = e => { e.preventDefault(); z.classList.remove("sobre"); e.dataTransfer.files[0] && subir(e.dataTransfer.files[0]); };
+
+$("descartar").onclick = async () => {
+  await fetch("../api/descartar", { method: "POST", body: JSON.stringify({ lote }) });
+  $("info").textContent = "Lote descartado. No se cambió nada."; $("panel-nuevo").hidden = true; lote = null; cargarEstado();
+};
+
+$("actualizar").onclick = async () => {
+  $("actualizar").disabled = $("descartar").disabled = true;
+  $("log").hidden = false; $("log").textContent = "Actualizando: valida, calcula el índice, registra en MLflow y publica…";
+  const d = await (await fetch("../api/actualizar", { method: "POST", body: JSON.stringify({ lote }) })).json();
+  $("log").textContent = d.log;
+  $("actualizar").disabled = $("descartar").disabled = false;
+  if (d.ok) { $("info").innerHTML += ` <span class="ok">Web actualizada.</span>`; $("acciones").hidden = true; await cargarEstado(lote); window.open(ESTADO.web || "../", "_blank"); }
+  else $("info").innerHTML += ` <span class="er">La actualización no publicó (código ${d.codigo}); revise el registro.</span>`;
+};
+
+// Deshacer: primer clic muestra qué se va a perder, el segundo lo confirma.
+$("restaurar").onclick = () => {
+  const ult = ESTADO.respaldos[0];
+  $("texto-confirmar").innerHTML = `<b>¿Realmente quiere deshacer la carga?</b> Se borrará el lote <b>${esc(ult.lote || "-")}</b> y la herramienta volverá a la configuración previa: datos del corte ${esc(ult.corte_previo || "-")}, como estaban antes del ${esc(ult.fecha)}. Esta acción no se puede deshacer.`;
+  $("confirmar").hidden = false; $("restaurar").disabled = true;
+};
+$("restaurar-no").onclick = () => { $("confirmar").hidden = true; $("restaurar").disabled = false; };
+$("restaurar-si").onclick = async () => {
+  $("restaurar-si").disabled = $("restaurar-no").disabled = true;
+  const r = await fetch("../api/restaurar", { method: "POST", body: JSON.stringify({ id: ESTADO.respaldos[0].id }) });
+  const d = await r.json();
+  $("restaurar-si").disabled = $("restaurar-no").disabled = false; $("restaurar").disabled = false;
+  if (!r.ok) { $("info").innerHTML = `<span class="er">No se pudo restaurar:</span> ${esc(d.error)}`; return; }
+  $("panel-nuevo").hidden = true; lote = null;
+  $("info").innerHTML = `<span class="ok">Carga deshecha.</span> Se borró el lote ${esc(d.restaurado.lote)} y la herramienta volvió al corte ${esc(d.restaurado.corte_previo || "-")}.`;
+  await cargarEstado();
+  window.open(ESTADO.web || "../", "_blank");   // la herramienta ya con la configuración anterior
+};
+
+cargarEstado();
+</script>
+</body>
+</html>

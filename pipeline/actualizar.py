@@ -266,6 +266,11 @@ def corrida(publicar=True, forzar=False, reentrenar=False):
                                                encoding="utf-8")
     if modelo.registrar_mlflow(rep):
         print("  Corrida registrada en MLflow, experimento pluz_modelo_vigente")
+    if publicar:
+        # Foto agregada para la página de carga en GitHub Pages (/cargar/), como /benchmark/.
+        from cargar import exportar
+        if exportar():
+            print("  Estado de la página de carga: cargar/estado.json")
     print(f"\nListo. Reporte en {config.SALIDAS / 'reporte.md'}")
     if publicar:
         print("Siguiente paso: revisar con la orden ver y publicar con la orden subir.")
@@ -302,6 +307,8 @@ def benchmark():
     print(f"\nModelo recomendado: {resultados['decision']['modelo']}")
     print(f"Reporte: {reporte}")
     print(f"Copia para GitHub Pages: {publico / 'index.html'}")
+    from cargar import exportar
+    exportar()   # el benchmark nuevo también se ve en /cargar/
     print("Corridas en MLflow: abrir con la orden mlflow" if uri else "MLflow no está instalado")
     webbrowser.open(reporte.as_uri())
 
@@ -408,12 +415,13 @@ def subir():
         return
     corte = json.loads(reporte.read_text(encoding="utf-8"))["corte"]
     git = lambda *a: subprocess.run(["git", *a], cwd=config.REPO, check=True)  # noqa: E731
-    subprocess.run(["git", "status", "--short", "data", "index.html"], cwd=config.REPO)
+    subprocess.run(["git", "status", "--short", "data", "index.html", "cargar/estado.json"],
+                   cwd=config.REPO)
     if input(f"¿Publicar los datos del corte {corte} en GitHub? Escriba si: ").strip().lower() \
             not in ("si", "sí"):
         print("No se publicó nada.")
         return
-    git("add", "data", "index.html")
+    git("add", "data", "index.html", "cargar/estado.json")
     git("commit", "-m", f"Datos al corte {corte}")
     git("push")
     print("Publicado. GitHub Pages tarda uno o dos minutos en mostrar la versión nueva.")

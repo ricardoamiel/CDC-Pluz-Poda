@@ -1,22 +1,25 @@
 # -*- coding: utf-8 -*-
-"""Página local para cargar el archivo semanal de Pluz y actualizar la herramienta.
+"""Carga semanal de datos de Pluz desde el navegador.
 
 Uso, desde la raíz del repositorio:
 
-    python pipeline/cargar.py          abre http://127.0.0.1:8050/ en el navegador
+    python pipeline/cargar.py            abre http://127.0.0.1:8050/cargar/ en el navegador
+    python pipeline/cargar.py exportar   escribe cargar/estado.json para GitHub Pages
 
-Pasos en la página:
-    1. Elegir el archivo de la semana (.xlsx o .csv). Se reconoce la fuente por el nombre
-       (mismos patrones que config.FUENTES) o, si es CSV, por sus columnas.
-    2. La página muestra en gráficos chicos lo que trae: filas por semana, alimentadores
-       con más registros y, si existe, SAIDI por semana.
-    3. «Actualizar la web» corre actualizar.py (corrida completa) y abre la página nueva.
+La página vive en cargar/index.html y funciona de dos maneras:
 
-El archivo se guarda en un lote nuevo, pipeline/datos/lotes/AAAAMMDD_carga. Si no cumple el
-contrato de datos, el lote se borra y no se toca nada.
+  * En GitHub Pages (/cargar/) es estática, como /benchmark/: valida el archivo de la semana
+    y dibuja lo que trae dentro del navegador. El archivo no sale del equipo. Los gráficos
+    del modelo y la literatura salen de cargar/estado.json, que solo lleva métricas
+    agregadas, nada fila a fila de los Excel de Pluz.
+  * Servida por este programa, en local, además guarda el archivo en un lote nuevo
+    (pipeline/datos/lotes/AAAAMMDD_carga), corre la actualización completa y abre la
+    herramienta con los datos nuevos. Antes de actualizar guarda un respaldo en
+    pipeline/salidas/respaldos/, y «Restaurar» deshace la carga: borra el lote y devuelve
+    data/, las salidas del modelo y cargar/estado.json a como estaban. Ahí la validación definitiva la hace pandas con el
+    mismo contrato de config.FUENTES que usa actualizar.py.
 """
 import fnmatch
-import functools
 import http.server
 import json
 import shutil
@@ -33,8 +36,11 @@ sys.path.insert(0, str(PIPELINE))
 import config  # noqa: E402
 
 PUERTO = 8050
-PAGINA = PIPELINE / "carga" / "index.html"
+CARPETA_PAGINA = config.REPO / "cargar"
+ESTADO_PUBLICO = CARPETA_PAGINA / "estado.json"
 
+
+# ----------------------------------------------------------------- recibir un archivo
 
 def _lote_nuevo():
     fecha = time.strftime("%Y%m%d")
@@ -72,42 +78,9 @@ def _csv_a_excel(origen, lote):
                      f"Columnas recibidas: {list(tabla.columns)[:12]}")
 
 
-def _resumen(fuente, archivo):
-    """Lo que trae el archivo, para los gráficos chicos de la página."""
-    import pandas as pd
-    from etapas.fuentes import _leer
-    esp = config.FUENTES[fuente]
-    t = _leer(archivo, esp)
-    res = {"fuente": fuente, "archivo": archivo.name, "filas": int(len(t)), "graficos": []}
-    if esp.get("fecha"):
-        f = pd.to_datetime(t[esp["fecha"]], errors="coerce")
-        t = t.assign(_f=f)[f.notna()]
-        if len(t):
-            res["desde"], res["hasta"] = str(t["_f"].min().date()), str(t["_f"].max().date())
-            semana = t["_f"].dt.to_period("W-SUN").dt.start_time.dt.strftime("%d/%m")
-            orden = t["_f"].dt.to_period("W-SUN").dt.start_time
-            por = t.assign(_s=semana, _o=orden).groupby(["_o", "_s"]).size().reset_index()
-            res["graficos"].append({"titulo": "Registros por semana",
-                                    "etiquetas": por["_s"].tolist(), "valores": por[0].tolist()})
-            if "SAIDI" in t.columns:
-                s = t.assign(_o=orden, _s=semana, SAIDI=pd.to_numeric(t["SAIDI"], errors="coerce"))
-                s = s.groupby(["_o", "_s"])["SAIDI"].sum().reset_index()
-                res["graficos"].append({"titulo": "SAIDI sumado por semana",
-                                        "etiquetas": s["_s"].tolist(),
-                                        "valores": [round(v, 3) for v in s["SAIDI"]]})
-    col = next((c for c in ("Alimentador", "ALIMENTADOR", "ALIM") if c in t.columns), None)
-    if col:
-        top = t[col].astype(str).value_counts().head(10)
-        res["graficos"].append({"titulo": "Alimentadores con más registros",
-                                "etiquetas": top.index.tolist(), "valores": top.tolist()})
-    if "DISTRITO" in t.columns:
-        top = t["DISTRITO"].astype(str).value_counts().head(10)
-        res["graficos"].append({"titulo": "Registros por distrito",
-                                "etiquetas": top.index.tolist(), "valores": top.tolist()})
-    return res
-
-
 def recibir_archivo(nombre, contenido):
+    """Guarda el archivo en un lote nuevo y lo valida con el contrato. Si falla, no queda nada."""
+    from etapas.fuentes import _leer
     nombre = Path(nombre).name
     if Path(nombre).suffix.lower() not in config.EXTENSIONES_LOTE:
         raise ValueError(f"Solo se aceptan {config.EXTENSIONES_LOTE}")
@@ -123,19 +96,100 @@ def recibir_archivo(nombre, contenido):
             if fuente is None:
                 raise ValueError("El nombre no coincide con ninguna fuente. Ejemplo esperado: "
                                  "«Interrupciones diarias ....xlsx» o «PODA ... FORMATO UNIFICADO.xlsx»")
-        res = _resumen(fuente, archivo)
-        res["lote"] = lote.name
-        return res
+        filas = len(_leer(archivo, config.FUENTES[fuente]))
+        return {"lote": lote.name, "fuente": fuente, "archivo": archivo.name, "filas": filas}
     except Exception:
         shutil.rmtree(lote, ignore_errors=True)
         raise
 
 
-def _literatura():
+# ----------------------------------------------------------------- respaldo y restauración
+# Antes de cada actualización desde la página se guarda una copia de lo que la carga va a
+# cambiar. «Restaurar» devuelve esa copia y borra el lote: la herramienta queda como estaba
+# antes de subir el archivo. Las corridas de MLflow no se borran: quedan como historial.
+
+RESPALDOS = config.SALIDAS / "respaldos"
+MAXIMO_RESPALDOS = 5
+_NO_RESPALDAR = {"mlflow.db", "mlruns", "benchmark", "respaldos", "registros"}
+
+
+def respaldar(lote):
+    marca = time.strftime("%Y%m%d_%H%M%S")
+    destino = RESPALDOS / f"{marca}_{Path(lote).name or 'sin_lote'}"
+    destino.mkdir(parents=True)
+    shutil.copytree(config.DATA_WEB, destino / "data")
+    salidas = destino / "salidas"
+    salidas.mkdir()
+    for f in config.SALIDAS.iterdir():
+        if f.is_file() and f.name not in _NO_RESPALDAR:
+            shutil.copy2(f, salidas / f.name)
+    if not config.DEMO and ESTADO_PUBLICO.exists():
+        shutil.copy2(ESTADO_PUBLICO, destino / "estado.json")
+    reporte = config.SALIDAS / "reporte.json"
+    previo = json.loads(reporte.read_text(encoding="utf-8")) if reporte.exists() else {}
+    (destino / "respaldo.json").write_text(json.dumps(
+        {"lote": Path(lote).name, "fecha": time.strftime("%Y-%m-%d %H:%M"),
+         "corte_previo": previo.get("corte"), "corrida_previa": previo.get("fecha")},
+        ensure_ascii=False), encoding="utf-8")
+    for viejo in sorted(p for p in RESPALDOS.iterdir() if p.is_dir())[:-MAXIMO_RESPALDOS]:
+        shutil.rmtree(viejo)
+    return destino
+
+
+def respaldos():
+    if not RESPALDOS.exists():
+        return []
+    out = []
+    for p in sorted((p for p in RESPALDOS.iterdir() if (p / "respaldo.json").exists()), reverse=True):
+        out.append({"id": p.name, **json.loads((p / "respaldo.json").read_text(encoding="utf-8"))})
+    return out
+
+
+def _renovar_version():
+    """Cambia ?v= de los datos en index.html para que el navegador no use la copia vieja."""
+    import re
+    pagina = config.DATA_WEB.parent / "index.html"
+    if pagina.exists():
+        html = pagina.read_text(encoding="utf-8")
+        html = re.sub(r'(src="data/[a-z_]+\.js)(\?v=[0-9]+)?"',
+                      rf'\1?v={time.strftime("%Y%m%d%H%M")}"', html)
+        pagina.write_text(html, encoding="utf-8")
+
+
+def restaurar(ident):
+    """Vuelve al estado previo a la carga del respaldo indicado (el más reciente si no hay)."""
+    lista = respaldos()
+    if not lista:
+        raise ValueError("No hay ninguna carga que deshacer.")
+    elegido = next((r for r in lista if r["id"] == ident), None) if ident else lista[0]
+    if elegido is None:
+        raise ValueError("Ese respaldo ya no existe.")
+    origen = RESPALDOS / elegido["id"]
+    shutil.rmtree(config.DATA_WEB)
+    shutil.copytree(origen / "data", config.DATA_WEB)
+    for f in (origen / "salidas").iterdir():
+        shutil.copy2(f, config.SALIDAS / f.name)
+    if not config.DEMO and (origen / "estado.json").exists():
+        shutil.copy2(origen / "estado.json", ESTADO_PUBLICO)
+    lote = config.LOTES / elegido["lote"]
+    if "_carga" in elegido["lote"] and lote.is_dir():
+        shutil.rmtree(lote)
+    _renovar_version()
+    # Este respaldo y los posteriores ya no aplican: la configuración volvió a antes de ellos.
+    for r in lista:
+        shutil.rmtree(RESPALDOS / r["id"])
+        if r["id"] == elegido["id"]:
+            break
+    return elegido
+
+
+# ----------------------------------------------------------------- estado para la página
+
+def _literatura(con_pdf):
     """Fuentes de papers/README.md, agrupadas por la decisión del proyecto que respaldan."""
     import re
     texto = (config.REPO / "papers" / "README.md").read_text(encoding="utf-8")
-    pdfs = sorted(p.name for p in (config.REPO / "papers").glob("*.pdf"))
+    pdfs = sorted(p.name for p in (config.REPO / "papers").glob("*.pdf")) if con_pdf else []
     grupos, actual = [], None
     for linea in texto.splitlines():
         if linea.startswith("### "):
@@ -145,21 +199,19 @@ def _literatura():
             m = re.match(r"\* \*\*(.+?)\*\*\s*(.*)", linea)
             if not m:
                 continue
-            resto = m.group(2)
-            num = re.search(r"Archivo (\d\d)", resto)
+            num = re.search(r"Archivo (\d\d)", m.group(2))
             pdf = next((p for p in pdfs if num and p.startswith(num.group(1))), None)
             actual["fuentes"].append({"autor": m.group(1).rstrip("."),
-                                      "nota": re.sub(r"\s*Archivo \d\d\.?$", "", resto),
+                                      "nota": re.sub(r"\s*Archivo \d\d\.?$", "", m.group(2)),
                                       "pdf": pdf})
     return [g for g in grupos if g["fuentes"]]
 
 
 def _mlflow():
-    """Historial del modelo vigente y benchmark, leídos directo de la base de MLflow."""
+    """Historial del modelo vigente y último benchmark, leídos directo de la base de MLflow."""
     import sqlite3
-    db = next((p for p in (config.SALIDAS / "mlflow.db", PIPELINE / "salidas" / "mlflow.db")
-               if p.exists()), None)
-    if db is None:
+    db = config.SALIDAS / "mlflow.db"
+    if not db.exists():
         return {}
     c = sqlite3.connect(db)
     exp = dict(c.execute("select name, experiment_id from experiments"))
@@ -181,86 +233,126 @@ def _mlflow():
     return {"vigente": vig[-12:], "benchmark": bench}
 
 
-def estado():
+def _contrato():
+    """Lo que la página necesita para validar en el navegador, tomado de config.FUENTES."""
+    return {f: {k: e.get(k) for k in ("patrones", "hoja", "encabezado", "columnas", "fecha", "modo")}
+            for f, e in config.FUENTES.items()}
+
+
+def estado(publico=False):
     reporte = config.SALIDAS / "reporte.json"
     rep = json.loads(reporte.read_text(encoding="utf-8")) if reporte.exists() else {}
-    return {"reporte": {k: rep.get(k) for k in ("fecha", "corte", "ventana", "validacion",
+    fuentes = rep.get("fuentes", {})
+    if publico:   # sin nombres de archivo de Pluz, solo conteos y periodos
+        fuentes = {k: ({"filas": v["filas"]} if isinstance(v, dict) and "filas" in v else v)
+                   for k, v in fuentes.items() if k not in ("avisos",)}
+    return {"modo": "estatico" if publico else "local",
+            "web": "../" if publico or not config.DEMO else "/web/",
+            "reporte": {k: rep.get(k) for k in ("fecha", "corte", "ventana", "validacion",
                                                  "monitoreo", "publicado")},
-            "fuentes": rep.get("fuentes", {}),
-            "lotes": [p.name for p in sorted(config.LOTES.iterdir()) if p.is_dir()]
-            if config.LOTES.exists() else [],
-            "mlflow": _mlflow(), "literatura": _literatura()}
+            "fuentes": fuentes,
+            "lotes": [] if publico else
+            ([p.name for p in sorted(config.LOTES.iterdir()) if p.is_dir()]
+             if config.LOTES.exists() else []),
+            "respaldos": [] if publico else respaldos(),
+            "contrato": _contrato(), "mlflow": _mlflow(), "literatura": _literatura(not publico)}
 
+
+def exportar():
+    """Escribe cargar/estado.json, la foto que usa la página en GitHub Pages."""
+    if config.DEMO:
+        return None   # el modo demostración nunca toca lo que se publica
+    ESTADO_PUBLICO.write_text(json.dumps(estado(publico=True), ensure_ascii=False),
+                              encoding="utf-8")
+    return ESTADO_PUBLICO
+
+
+# ----------------------------------------------------------------- servidor local
 
 class Manejador(http.server.SimpleHTTPRequestHandler):
+    """Sirve el repositorio (página de carga y herramienta) y la API de carga en /api/."""
+
     def __init__(self, *a, **k):
-        super().__init__(*a, directory=str(config.DATA_WEB.parent), **k)
+        super().__init__(*a, directory=str(config.REPO), **k)
+
+    def log_message(self, *a):
+        pass
 
     def _json(self, codigo, datos):
         cuerpo = json.dumps(datos, ensure_ascii=False).encode("utf-8")
         self.send_response(codigo)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(cuerpo)))
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(cuerpo)
 
+    def end_headers(self):
+        # Sin caché: cada carga tiene que ver los datos recién publicados.
+        if not self.path.startswith("/api/"):
+            self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
     def do_GET(self):
-        if self.path in ("/", "/carga"):
-            cuerpo = PAGINA.read_bytes()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
+        ruta = self.path.split("?")[0]
+        if ruta in ("/", "/cargar"):
+            self.send_response(302)
+            self.send_header("Location", "/cargar/")
             self.end_headers()
-            self.wfile.write(cuerpo)
-        elif self.path == "/estado":
+        elif ruta == "/api/estado":
             try:
                 self._json(200, estado())
             except Exception as e:
                 self._json(500, {"error": str(e)})
-        elif self.path.split("/")[1] in ("css", "assets", "papers"):
-            # Estilos, logo y literatura de la herramienta original, siempre del repositorio.
-            ruta = (config.REPO / urllib.parse.unquote(self.path.split("?")[0]).lstrip("/")).resolve()
-            if config.REPO in ruta.parents and ruta.is_file():
-                tipo = self.guess_type(str(ruta))
-                self.send_response(200)
-                self.send_header("Content-Type", tipo)
-                self.end_headers()
-                self.wfile.write(ruta.read_bytes())
-            else:
-                self.send_error(404)
-        elif self.path.startswith("/web/"):
-            self.path = self.path[4:]   # la herramienta se sirve bajo /web/
+        elif ruta.startswith("/pipeline/"):
+            self.send_error(404)   # los lotes de Pluz no se sirven nunca
+        elif ruta.startswith("/web/") and config.DEMO:
+            # En modo demostración la herramienta es la copia propia del demo.
+            self.directory = str(config.DATA_WEB.parent)
+            self.path = self.path[4:]
             super().do_GET()
         else:
-            self.send_error(404)
+            super().do_GET()
 
     def do_POST(self):
         largo = int(self.headers.get("Content-Length", 0))
-        if self.path == "/subir":
+        if self.path == "/api/subir":
             nombre = urllib.parse.unquote(self.headers.get("X-Nombre", "archivo.xlsx"))
             try:
                 self._json(200, recibir_archivo(nombre, self.rfile.read(largo)))
             except Exception as e:  # el mensaje llega tal cual a la página
                 self._json(400, {"error": str(e)})
-        elif self.path == "/descartar":
-            lote = json.loads(self.rfile.read(largo) or b"{}").get("lote", "")
-            destino = config.LOTES / Path(lote).name
-            if lote.endswith(tuple(f"_carga{s}" for s in ["", *map(str, range(2, 50))])) \
-                    and destino.is_dir():
+        elif self.path == "/api/descartar":
+            lote = Path(json.loads(self.rfile.read(largo) or b"{}").get("lote", "")).name
+            destino = config.LOTES / lote
+            if "_carga" in lote and destino.is_dir():
                 shutil.rmtree(destino)
             self._json(200, {"ok": True})
-        elif self.path == "/actualizar":
+        elif self.path == "/api/actualizar":
+            lote = json.loads(self.rfile.read(largo) or b"{}").get("lote", "")
+            respaldar(lote)   # para poder deshacer la carga con «Restaurar»
             r = subprocess.run([sys.executable, str(PIPELINE / "actualizar.py")],
                                cwd=config.REPO, capture_output=True, text=True)
             self._json(200, {"ok": r.returncode == 0, "codigo": r.returncode,
                              "log": (r.stdout + r.stderr)[-6000:]})
+        elif self.path == "/api/restaurar":
+            ident = json.loads(self.rfile.read(largo) or b"{}").get("id")
+            try:
+                self._json(200, {"ok": True, "restaurado": restaurar(ident)})
+            except Exception as e:
+                self._json(400, {"error": str(e)})
         else:
             self.send_error(404)
 
 
 def main():
+    if sys.argv[1:2] == ["exportar"]:
+        destino = exportar()
+        print(f"Escrito {destino}" if destino else "En modo demostración no se exporta nada.")
+        return
     servidor = http.server.ThreadingHTTPServer(("127.0.0.1", PUERTO), Manejador)
-    url = f"http://127.0.0.1:{PUERTO}/"
-    print(f"Carga semanal en {url}  (la herramienta queda en {url}web/). Cierre con Ctrl y C.")
+    url = f"http://127.0.0.1:{PUERTO}/cargar/"
+    print(f"Carga semanal en {url}. Cierre con Ctrl y C.")
     webbrowser.open(url)
     servidor.serve_forever()
 
