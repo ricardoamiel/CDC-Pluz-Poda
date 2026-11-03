@@ -7,7 +7,8 @@
 <meta name="description" content="Mapa interactivo del índice de criticidad por vegetación en el piloto de Los Olivos, por alimentador y por subestación, y comparación con otros distritos de Lima Norte. Pluz Energía y UTEC.">
 <meta name="theme-color" content="#395aa1">
 <link rel="icon" href="assets/favicon.png" type="image/png">
-<link rel="stylesheet" href="css/estilos.css?v=20261005">
+<link rel="stylesheet" href="css/estilos.css?v=20261102">
+<script src="js/tema.js?v=20261102"></script>
 </head>
 <body>
 
@@ -35,6 +36,8 @@
     <symbol viewBox="0 0 24 24" id="i-capas"><path d="m12 2.8 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5M3 17.4l9 5 9-5"/></symbol>
     <symbol viewBox="0 0 24 24" id="i-pin"><path d="M20 10.4c0 5.6-8 11.6-8 11.6s-8-6-8-11.6a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10.2" r="2.9"/></symbol>
     <symbol viewBox="0 0 24 24" id="i-tilde"><path d="m4.5 12.5 5 5 10-11"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-pantalla"><rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M8.5 20.5h7M12 16.5v4"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-subir"><path d="M21 15.5v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3"/><path d="m7.5 8 4.5-4.5L16.5 8M12 3.5v12"/></symbol>
   </defs>
 </svg>
 
@@ -52,12 +55,14 @@
     </div>
     <div class="cabecera-acciones">
       <span class="sello" id="sello-corte"><svg class="ico" aria-hidden="true"><use href="#i-reloj"/></svg><span></span></span>
-      <!-- Reporte del benchmark de modelos, publicado en la carpeta benchmark del mismo sitio. -->
-      <a class="boton" href="benchmark/" target="_blank" rel="noopener" style="text-decoration:none" title="Comparación de modelos frente a la regla por historial">
-        <svg class="ico" aria-hidden="true"><use href="#i-curva"/></svg>Benchmark
-      </a>
-      <button class="boton-icono" id="boton-tema" type="button" aria-label="Cambiar entre tema claro y oscuro" title="Cambiar tema">
-        <svg class="ico" aria-hidden="true"><use href="#i-luna"/></svg>
+      <!-- Navegación entre las tres páginas del sitio. La misma barra va en benchmark y cargar. -->
+      <nav class="navegacion" aria-label="Páginas">
+        <a href="./" aria-current="page"><svg class="ico" aria-hidden="true"><use href="#i-mapa"/></svg>Herramienta</a>
+        <a href="benchmark/"><svg class="ico" aria-hidden="true"><use href="#i-curva"/></svg>Benchmark</a>
+        <a href="cargar/"><svg class="ico" aria-hidden="true"><use href="#i-subir"/></svg>Carga semanal</a>
+      </nav>
+      <button class="boton-icono" id="boton-tema" type="button" aria-label="Tema claro" title="Tema claro">
+        <svg class="ico" aria-hidden="true"><use href="#i-sol"/></svg>
       </button>
     </div>
   </header>
@@ -303,6 +308,6 @@
 <script src="data/geografia_distritos.js?v=202610192158"></script>
 <script src="js/teselas.js?v=20261019"></script>
 <script src="js/comparar.js?v=20261021"></script>
-<script src="js/app.js?v=20261022"></script>
+<script src="js/app.js?v=20261102"></script>
 </body>
 </html>

@@ -9,7 +9,8 @@
 <link rel="icon" href="../assets/favicon.png" type="image/png">
 <!-- La misma hoja de estilos de la herramienta: paleta del logotipo, cabecera y paneles.
      Rutas relativas para que funcione igual publicada y en local. -->
-<link rel="stylesheet" href="../css/estilos.css">
+<link rel="stylesheet" href="../css/estilos.css?v=20261102">
+<script src="../js/tema.js?v=20261102"></script>
 <style>
   .viz-root { padding: 20px 16px 40px; }
   .vista { max-width: 1440px; margin: 0 auto; display: grid; gap: 16px; }
@@ -23,7 +24,7 @@
   .modo { max-width: 1440px; margin: 0 auto 16px; font-size: 12.5px; color: var(--tinta-2); background: var(--azul-050); border: 1px solid var(--borde); border-radius: var(--radio-s); padding: 9px 14px; }
   .modo b { color: var(--azul-700); }
   .zona { display: block; border: 2px dashed var(--borde-fuerte); border-radius: var(--radio); padding: 34px 18px; text-align: center; cursor: pointer; background: var(--azul-050); color: var(--tinta-2); font-size: 14px; transition: .15s; }
-  .zona strong { color: var(--azul-600); }
+  .zona strong { color: var(--azul-700); }
   .zona.sobre { border-color: var(--pluz-azul); background: var(--azul-100); }
   .estado-carga { font-size: 13px; color: var(--tinta-2); margin: 12px 0 0; }
   .ok { color: var(--ok); font-weight: 700; } .er { color: var(--critico); font-weight: 700; } .av { color: var(--aviso); font-weight: 700; }
@@ -33,6 +34,7 @@
   .mini h3 { font-size: 12px; margin: 0 0 6px; color: var(--tinta-2); }
   .mini p { font-size: 11px; color: var(--tinta-3); margin: 4px 0 0; }
   .mini svg, .grafico svg { width: 100%; height: auto; display: block; }
+  .grafico svg { max-width: 640px; }
   .controles { list-style: none; padding: 0; margin: 0 0 14px; display: grid; gap: 6px; }
   .controles li { font-size: 13px; color: var(--tinta-2); padding: 7px 12px; border-radius: var(--radio-s); background: var(--superficie-3); border-left: 4px solid var(--borde-fuerte); }
   .controles li.ok { border-left-color: var(--ok); background: var(--ok-suave); font-weight: 400; color: var(--tinta-2); }
@@ -54,9 +56,9 @@
   .lit a { color: var(--azul-600); font-weight: 600; text-decoration: none; font-size: 12px; margin-left: 4px; }
   .lit a:hover { text-decoration: underline; }
   .deshacer { border-left: 4px solid var(--pluz-amarillo); }
-  .confirmar { margin-top: 12px; padding: 14px 16px; border-radius: var(--radio-s); background: #fdf1ef; border: 1px solid #f0c4bf; }
+  .confirmar { margin-top: 12px; padding: 14px 16px; border-radius: var(--radio-s); background: var(--superficie-3); border: 1px solid var(--critico); border-left-width: 4px; }
   .confirmar p { margin: 0 0 10px; font-size: 13px; color: var(--tinta); line-height: 1.5; }
-  .boton-peligro { background: var(--critico); border-color: var(--critico); color: #fff; }
+  .boton-peligro { background: #b3261e; border-color: #b3261e; color: #fff; }
   .boton-peligro:hover { background: #8f1d17; border-color: #8f1d17; }
   .lotes { display: flex; gap: 6px; flex-wrap: wrap; }
   .lotes .sello { font-size: 11.5px; }
@@ -64,6 +66,16 @@
 </style>
 </head>
 <body>
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <symbol viewBox="0 0 24 24" id="i-mapa"><path d="M9 4 3 6.5v13L9 17l6 2.5 6-2.5v-13L15 6.5 9 4Z"/><path d="M9 4v13M15 6.5v13"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-curva"><path d="M3 3v16.5h18"/><path d="M6.5 15.5c3.5 0 4.5-8 8-8 2.5 0 3 4 4.5 4"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-subir"><path d="M21 15.5v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3"/><path d="m7.5 8 4.5-4.5L16.5 8M12 3.5v12"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-sol"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2 12h2.4M19.6 12H22M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-luna"><path d="M20.5 14.3A8.7 8.7 0 0 1 9.7 3.5a8.7 8.7 0 1 0 10.8 10.8Z"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-pantalla"><rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M8.5 20.5h7M12 16.5v4"/></symbol>
+  </defs>
+</svg>
 <div class="viz-root">
 
   <header class="cabecera">
@@ -78,7 +90,14 @@
     </div>
     <div class="cabecera-acciones">
       <span class="sello" id="sello">Última corrida -</span>
-      <a class="boton boton-principal" id="abrir-web" href="../" target="_blank" style="text-decoration:none">Abrir la herramienta</a>
+      <nav class="navegacion" aria-label="Páginas">
+        <a href="../" id="nav-herramienta"><svg class="ico" aria-hidden="true"><use href="#i-mapa"/></svg>Herramienta</a>
+        <a href="../benchmark/"><svg class="ico" aria-hidden="true"><use href="#i-curva"/></svg>Benchmark</a>
+        <a href="./" aria-current="page"><svg class="ico" aria-hidden="true"><use href="#i-subir"/></svg>Carga semanal</a>
+      </nav>
+      <button class="boton-icono" id="boton-tema" type="button" aria-label="Tema claro" title="Tema claro">
+        <svg class="ico" aria-hidden="true"><use href="#i-sol"/></svg>
+      </button>
     </div>
   </header>
 
@@ -220,7 +239,7 @@ async function cargarEstado(nuevo) {
   $("modo").innerHTML = LOCAL
     ? "<b>Modo local.</b> El archivo se valida, se guarda como lote nuevo y la web se actualiza desde este equipo."
     : "<b>Vista de validación.</b> El archivo se revisa dentro de su navegador y no se envía a ningún servidor. Para incorporarlo a la herramienta, abra esta página en el equipo del pipeline con <code>python pipeline/cargar.py</code>.";
-  $("abrir-web").href = d.web || "../";
+  $("nav-herramienta").href = d.web || "../";
   $("panel-lotes").hidden = !LOCAL;
   const ult = (d.respaldos || [])[0];
   $("panel-deshacer").hidden = !(LOCAL && ult);
@@ -455,6 +474,9 @@ $("restaurar-si").onclick = async () => {
   await cargarEstado();
   window.open(ESTADO.web || "../", "_blank");   // la herramienta ya con la configuración anterior
 };
+
+// Al cambiar el tema (js/tema.js) se redibujan los gráficos con los colores nuevos.
+document.addEventListener("pluz-tema", () => cargarEstado(lote));
 
 cargarEstado();
 </script>

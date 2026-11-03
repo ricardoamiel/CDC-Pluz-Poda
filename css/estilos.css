@@ -204,6 +204,27 @@ img { max-width: 100%; }
 }
 .sello .ico { width: 14px; height: 14px; color: var(--azul-600); }
 
+/* Navegación entre las tres páginas: herramienta, benchmark y carga semanal. La página
+   actual va marcada con aria-current y se ve como la pestaña elegida. */
+.navegacion {
+  display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px;
+  background: var(--superficie-3); border: 1px solid var(--borde); border-radius: var(--radio-s);
+}
+.navegacion a {
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 7px;
+  font-size: 13px; font-weight: 600; color: var(--tinta-2); text-decoration: none; white-space: nowrap;
+}
+.navegacion a .ico { width: 15px; height: 15px; }
+.navegacion a:hover { background: var(--superficie-2); color: var(--tinta); }
+.navegacion a[aria-current="page"] {
+  background: var(--superficie-2); color: var(--azul-600); box-shadow: var(--sombra);
+}
+:root[data-theme="dark"] .navegacion a[aria-current="page"] { color: var(--azul-700); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .navegacion a[aria-current="page"] { color: var(--azul-700); }
+}
+.cabecera-acciones { flex-wrap: wrap; }
+
 /* --------------------------------------------------------------- controles */
 .boton, .boton-icono {
   font: inherit; font-size: 13px; font-weight: 600; border-radius: var(--radio-s);

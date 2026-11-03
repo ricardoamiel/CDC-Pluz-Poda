@@ -52,13 +52,9 @@
   const POSTES = ((window.POSTES_MT && window.POSTES_MT.distritos.LOL) || [])
     .map(([poste, lon, lat, sed]) => ({ poste, lon, lat, sed }));
 
-  // Un parámetro en la dirección permite abrir la página directamente en un tema, lo que
-  // sirve para incrustarla o para capturarla en un informe sin depender de la
-  // configuración del equipo. Sin parámetro se respeta el tema del sistema.
+  // El tema (claro por defecto, sistema u oscuro, y el parámetro ?tema=) lo fija js/tema.js
+  // en el <head>, antes de que se dibuje nada.
   const parametros = new URLSearchParams(location.search);
-  const temaPedido = parametros.get("tema");
-  if (temaPedido === "claro") document.documentElement.setAttribute("data-theme", "light");
-  if (temaPedido === "oscuro") document.documentElement.setAttribute("data-theme", "dark");
 
   const RAMPA = ["--idx-1", "--idx-2", "--idx-3", "--idx-4", "--idx-5", "--idx-6", "--idx-7"];
   const COMPS = ["--comp-1", "--comp-2", "--comp-3", "--comp-4"];
@@ -1731,20 +1727,9 @@
 
   $("#descargar").addEventListener("click", descargarCsv);
 
-  const botonTema = $("#boton-tema");
-  function iconoTema() {
-    const oscuroSistema = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const actual = document.documentElement.getAttribute("data-theme");
-    const esOscuro = actual ? actual === "dark" : oscuroSistema;
-    botonTema.querySelector("use").setAttribute("href", esOscuro ? "#i-sol" : "#i-luna");
-    botonTema.title = esOscuro ? "Cambiar a tema claro" : "Cambiar a tema oscuro";
-  }
-  botonTema.addEventListener("click", function () {
-    const actual = document.documentElement.getAttribute("data-theme");
-    const oscuro = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const siguiente = actual ? (actual === "dark" ? "light" : "dark") : (oscuro ? "light" : "dark");
-    document.documentElement.setAttribute("data-theme", siguiente);
-    iconoTema();
+  // El botón de tema lo maneja js/tema.js, común a las tres páginas (claro, sistema y
+  // oscuro). Aquí solo se redibuja con los colores del tema nuevo.
+  document.addEventListener("pluz-tema", function () {
     if (vistaActual() === "comparar") window.COMPARADOR.dibujar();
     else actualizar();
   });
@@ -1813,7 +1798,6 @@
     .classed("activo", function () { return this.dataset.nivel === estado.nivel; })
     .attr("aria-checked", function () { return String(this.dataset.nivel === estado.nivel); });
 
-  iconoTema();
   ajustarCorte();
   construirEscala();
   dibujarMapa();
