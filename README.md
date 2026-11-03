@@ -126,7 +126,7 @@ python pipeline/actualizar.py ver
 
 La primera orden valida el lote, monitorea el modelo vigente y lo recalibra si hace falta, predice los tres meses siguientes al último mes con datos, recalcula el índice de los ocho distritos y reescribe la carpeta data. La segunda abre la página para revisarla.
 
-También se puede hacer desde el navegador, sin escribir órdenes. Basta con correr python pipeline/cargar.py en el equipo del pipeline y abrir la Carga semanal, en local o en la dirección publicada: la página detecta el pipeline de ese equipo y habilita todo el flujo. Se arrastra el archivo, se revisa, se compara con lo ya cargado, se confirma, se actualiza la herramienta, se deshace si hizo falta y se publica, cada paso con su botón. Sin el pipeline corriendo, la Carga semanal solo revisa el archivo dentro del navegador, sin enviarlo a ningún lado. El detalle está en pipeline/README.md.
+También se puede hacer desde el navegador, sin escribir órdenes. Basta con correr python pipeline/cargar.py en el equipo del pipeline y abrir la Carga semanal, en local o en la dirección publicada: la página detecta el pipeline de ese equipo y habilita todo el flujo. Se arrastra el archivo, se revisa, se compara con lo ya cargado, se confirma, se actualiza la herramienta, se deshace si hizo falta y se publica, cada paso con su botón. Sin el pipeline corriendo, la Carga semanal solo revisa el archivo dentro del navegador, sin enviarlo a ningún lado. El paso a paso con capturas, cómo probarla en modo demostración, cómo deshacer una carga y qué hacer si algo falla está en docs/GUIA_CARGA_SEMANAL.md.
 
 Los Excel de Pluz nunca se publican: se quedan en el equipo que corre el pipeline.
 
@@ -144,6 +144,7 @@ Los Excel de Pluz nunca se publican: se quedan en el equipo que corre el pipelin
 * **assets.** Logotipo completo, isotipo e icono de pestaña.
 * **pipeline.** Flujo de datos, del lote de Pluz a la carpeta data. Se documenta en pipeline/README.md.
 * **docs.** Diagramas de arquitectura en SVG, el generador que los dibuja y las guías paso a paso de las dos propuestas.
+* **docs/GUIA_CARGA_SEMANAL.md.** Guía de la carga semanal: prueba en modo demostración, uso con los datos reales, deshacer una carga y qué hacer ante cada fallo.
 * **docs/capturas.** Capturas de las tres páginas que se muestran al inicio de este documento.
 * **ARQUITECTURA.md.** Propuestas para la operación, en las instalaciones de Pluz y en AWS.
 * **docs/PRUEBA_DE_USUARIO.md.** Recorrido de la herramienta en el papel de un usuario de Pluz sin formación técnica: lo fuerte y las mejoras por prioridad. Las mejoras rápidas ya están aplicadas.

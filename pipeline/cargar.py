@@ -6,7 +6,11 @@ Uso, desde la raíz del repositorio:
     python pipeline/cargar.py             abre la carga en http://127.0.0.1:8050/cargar/
     python pipeline/cargar.py publicado   abre la carga en la dirección publicada, conectada
                                           a este equipo
+    python pipeline/cargar.py restaurar   deshace la última carga, como el botón Restaurar
     python pipeline/cargar.py exportar    escribe cargar/estado.json
+
+El puerto es 8050; se cambia con la variable PLUZ_PUERTO, y la página publicada lo recibe
+en la dirección con ?puerto=.
 
 La página vive en cargar/index.html y funciona de tres maneras:
 
@@ -47,7 +51,7 @@ sys.path.insert(0, str(PIPELINE))
 
 import config  # noqa: E402
 
-PUERTO = 8050
+PUERTO = int(os.environ.get("PLUZ_PUERTO", "8050"))
 LOCAL = f"http://127.0.0.1:{PUERTO}"
 CARPETA_PAGINA = config.REPO / "cargar"
 ESTADO_PUBLICO = CARPETA_PAGINA / "estado.json"
@@ -481,13 +485,24 @@ class Manejador(http.server.SimpleHTTPRequestHandler):
 
 
 def main():
+    if sys.argv[1:2] == ["restaurar"]:
+        try:
+            r = restaurar(None)
+        except ValueError as e:
+            print(e)
+            return
+        print(f"Carga deshecha: se borró el lote {r['lote']} y la herramienta volvió al corte "
+              f"{r['corte_previo']}, como estaba antes del {r['fecha']}.")
+        if pendiente_de_publicar():
+            print("Si esa carga ya se había publicado, publique de nuevo desde la página.")
+        return
     if sys.argv[1:2] == ["exportar"]:
         destino = exportar()
         print(f"Escrito {destino}" if destino else "En modo demostración no se exporta nada.")
         return
     servidor = http.server.ThreadingHTTPServer(("127.0.0.1", PUERTO), Manejador)
     local = f"{LOCAL}/cargar/"
-    publicada = urllib.parse.urljoin(URL_PUBLICADA, "cargar/")
+    publicada = urllib.parse.urljoin(URL_PUBLICADA, "cargar/") + ("" if PUERTO == 8050 else f"?puerto={PUERTO}")
     print(f"Carga semanal en {local}")
     print(f"También desde la dirección publicada, conectada a este equipo: {publicada}")
     print("Cierre con Ctrl y C.")

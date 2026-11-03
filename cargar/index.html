@@ -246,7 +246,8 @@ const kpi = (titulo, valor, detalle, color) =>
 async function obtenerEstado() {
   // Servida por pipeline/cargar.py hay API; publicada, solo está la foto estado.json.
   // Abierta en la dirección publicada, busca el pipeline corriendo en este mismo equipo.
-  const base = EN_EQUIPO ? "../api" : "http://127.0.0.1:8050/api";
+  const puerto = new URLSearchParams(location.search).get("puerto") || "8050";
+  const base = EN_EQUIPO ? "../api" : `http://127.0.0.1:${/^\d+$/.test(puerto) ? puerto : "8050"}/api`;
   try {
     const r = await fetch(base + "/estado", { cache: "no-store", signal: AbortSignal.timeout(3000) });
     if (r.ok) { API = base; return await r.json(); }
@@ -498,7 +499,8 @@ $("actualizar").onclick = async () => {
   const d = await (await fetch(API + "/actualizar", { method: "POST", body: JSON.stringify({ lote }) })).json();
   $("log").textContent = d.log;
   $("actualizar").disabled = $("descartar").disabled = false;
-  if (d.ok) { $("info").innerHTML += ` <span class="ok">Herramienta actualizada en este equipo.</span>`; $("acciones").hidden = true; await cargarEstado(lote); window.open(ESTADO.web, "_blank"); }
+  if (d.ok && /ALTO:/.test(d.log)) { $("info").innerHTML += ` <span class="er">La actualización se detuvo: el modelo quedó por debajo de la regla por historial y la herramienta no cambió.</span> Revise el registro y deshaga la carga con «Restaurar».`; $("acciones").hidden = true; await cargarEstado(lote); }
+  else if (d.ok) { $("info").innerHTML += ` <span class="ok">Herramienta actualizada en este equipo.</span>`; $("acciones").hidden = true; await cargarEstado(lote); window.open(ESTADO.web, "_blank"); }
   else $("info").innerHTML += ` <span class="er">La actualización no publicó (código ${d.codigo}); revise el registro.</span>`;
 };
 

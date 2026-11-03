@@ -15,6 +15,8 @@ El recorrido completo es este:
 
 ## Carga semanal desde el navegador
 
+La guía para quien la usa, con capturas de cada paso, la prueba en modo demostración, cómo deshacer y qué hacer ante cada fallo, está en docs/GUIA_CARGA_SEMANAL.md. Aquí va el detalle técnico.
+
 ```
 python pipeline/cargar.py
 ```
@@ -49,7 +51,7 @@ Sin el pipeline corriendo, la página publicada solo revisa el archivo dentro de
 
 Los gráficos del modelo y la literatura de la página publicada salen de cargar/estado.json, que solo lleva conteos, periodos y métricas agregadas, y se regenera en cada corrida que publica y en cada benchmark.
 
-Para probar sin tocar los datos reales: PLUZ_DEMO=pipeline/datos/demo python pipeline/cargar.py. En modo demostración no se publica ni se toca cargar/estado.json.
+Para probar sin tocar los datos reales: PLUZ_DEMO=$PWD/pipeline/datos/demo python pipeline/cargar.py publicado. En modo demostración no se publica ni se toca cargar/estado.json. Los archivos de prueba se arman con python pipeline/demo/archivos_de_prueba.py. El puerto se cambia con PLUZ_PUERTO, y python pipeline/cargar.py restaurar deshace la última carga desde la terminal.
 
 
 ## La rutina semanal
