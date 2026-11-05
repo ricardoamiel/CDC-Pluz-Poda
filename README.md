@@ -13,7 +13,7 @@ Junto a la herramienta hay dos páginas más, en la misma dirección: **benchmar
 
 Tres páginas en la misma dirección, con la barra de la cabecera para pasar de una a otra: Herramienta, Benchmark y Carga semanal. El botón de la derecha cambia el tema: claro, que es el de partida, el del sistema u oscuro.
 
-**Herramienta.** El mapa de criticidad del piloto, la lista priorizada, los indicadores del plan y la comparación con otros distritos.
+**Herramienta.** El mapa de criticidad del piloto, la lista priorizada, los indicadores del plan con su respaldo frente a lo ocurrido, y la comparación con otros distritos.
 
 ![Herramienta: plan de poda priorizado del piloto Los Olivos](docs/capturas/herramienta.png)
 
@@ -60,6 +60,7 @@ Los filtros no cambian el plan. El plan lo fija siempre el tamaño elegido: filt
 * Ajusta el tamaño del plan con un control, de modo que la capacidad se puede discutir en la propia reunión y el mapa, la lista, la curva y el resumen se recalculan a la vez.
 * Muestra una ficha por unidad con el índice, la descomposición en sus cuatro componentes frente a la mediana del piloto y las razones principales que entregó el modelo.
 * Resume el plan con cuatro indicadores: unidades, clientes de baja tensión cubiertos, SAIDI del último año e interrupciones del último año de los alimentadores del plan. En la vista por subestación, el SAIDI y las interrupciones se cuentan una sola vez por alimentador, aunque varias subestaciones del plan lo compartan.
+* Respalda el plan con lo que pasó después. Una franja debajo de los indicadores dice, para el tamaño de plan elegido, qué parte de los minutos de SAIDI y de los cortes por vegetación de los tres meses siguientes cayó en los alimentadores del plan durante los meses de prueba, frente al azar y con su intervalo. Con el plan de 10 alimentadores de Los Olivos y los datos al corte de agosto de 2026, el 75 % del SAIDI por vegetación (al azar, 33 %). Se mide por alimentador; con 31 cortes en la prueba es una cifra indicativa.
 * Descarga el plan seleccionado en CSV, listo para la programación, con la latitud y la longitud de cada subestación.
 * El mapa se acerca con botones, con Ctrl y la rueda o con dos dedos, y tiene dos fondos: el coroplético y uno satelital con las calles y sus nombres, de Esri World Imagery. Las teselas se piden solo cuando se elige la vista satelital. Al acercar aparecen los postes de media tensión, y los de la unidad elegida se resaltan.
 * El buscador encuentra subestaciones, alimentadores, direcciones y postes por su código, lleva el mapa a la calle de lo encontrado y deja los cuatro indicadores describiendo solo eso.

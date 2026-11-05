@@ -208,6 +208,16 @@ def corrida(publicar=True, forzar=False, reentrenar=False):
         print(f"  {mt['distrito']}: {mt['n_alimentadores']} alimentadores, "
               f"{mt['n_subestaciones']} SED aéreas, plan de {mt['k_alimentadores']} "
               f"alimentadores o {mt['capacidad_mes']} subestaciones")
+    # Respaldo del plan con lo ocurrido: para cada tamaño de plan, qué parte del SAIDI y de los
+    # cortes por vegetación de los tres meses siguientes cayó en él, en los meses de prueba.
+    from etapas import negocio
+    codigo_piloto = config.DISTRITOS[config.PILOTO][0]
+    distritos[codigo_piloto]["negocio"] = negocio.curva_plan(tablas, panel, inicio)
+    k_plan = distritos[codigo_piloto]["meta"]["k_alimentadores"]
+    print(f"  Respaldo del plan: con {k_plan} alimentadores, "
+          f"{100 * distritos[codigo_piloto]['negocio']['captura_saidi'][k_plan - 1]:.0f} % del SAIDI por "
+          f"vegetación de los meses de prueba (al azar, "
+          f"{100 * distritos[codigo_piloto]['negocio']['azar'][k_plan - 1]:.0f} %)")
     # Modelo alternativo, solo para comparar en la página: se entrena con el vigente, con los
     # mismos meses, y se reutiliza mientras el vigente no cambie.
     alterno = None if recien_entrenado else modelo.cargar_alterno()

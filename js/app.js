@@ -1128,6 +1128,44 @@
     $("#kpi-interrupciones").textContent = miles(vegPlan);
     $("#kpi-interrupciones-pie").textContent =
       `de ${miles(intPlan)} interrupciones por todas las causas`;
+    dibujarRespaldo();
+  }
+
+  // Respaldo del plan con lo que pasó después. Se midió en los meses de prueba con el índice
+  // reconstruido mes a mes y el modelo vigente; por eso vale para la vista por alimentador.
+  const MESES_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+                    "setiembre", "octubre", "noviembre", "diciembre"];
+  function periodoTexto(p) {
+    const [a1, m1] = p[0].split("-").map(Number), [a2, m2] = p[1].split("-").map(Number);
+    return a1 === a2 ? `de ${MESES_ES[m1 - 1]} a ${MESES_ES[m2 - 1]} de ${a2}`
+      : `de ${MESES_ES[m1 - 1]} de ${a1} a ${MESES_ES[m2 - 1]} de ${a2}`;
+  }
+  function dibujarRespaldo() {
+    const N = window.DATOS_PLUZ && window.DATOS_PLUZ.negocio;
+    const caja = $("#respaldo-plan");
+    if (!N || !N.k || !N.k.length) { caja.hidden = true; return; }
+    caja.hidden = false;
+    const pct = (v) => `${coma(v * 100, 0)} %`;
+    if (estado.nivel !== "alimentadores") {
+      $("#respaldo-texto").innerHTML = "El respaldo del plan con lo ocurrido se mide por alimentador.";
+      $("#respaldo-nota").textContent = "Cambie a la vista por alimentador para verlo con el tamaño del plan.";
+      $("#respaldo-valor").style.width = "0"; $("#respaldo-azar").style.width = "0";
+      return;
+    }
+    const k = Math.max(1, Math.min(estado.corte, N.k.length)), i = k - 1;
+    $("#respaldo-texto").innerHTML =
+      `Validado con lo que pasó: en la prueba, ${periodoTexto(N.meses)}, un plan de ${k} ` +
+      `${k === 1 ? "alimentador ordenado" : "alimentadores ordenados"} por este índice concentró el ` +
+      `<b>${pct(N.captura_saidi[i])}</b> de los minutos de SAIDI por vegetación y el ` +
+      `${pct(N.captura_eventos[i])} de los cortes por vegetación de los tres meses siguientes. ` +
+      `Al azar: ${pct(N.azar[i])}.`;
+    $("#respaldo-nota").innerHTML =
+      `Indicativo: con ${miles(N.eventos_totales)} cortes en la prueba, el intervalo del 95 % va de ` +
+      `${pct(N.ic_saidi[i][0])} a ${pct(N.ic_saidi[i][1])}` +
+      (estado.modelo === 2 ? ". Medido con el modelo vigente" : "") +
+      `. <a href="benchmark/">Ver el detalle en Benchmark</a>`;
+    $("#respaldo-valor").style.width = `${N.captura_saidi[i] * 100}%`;
+    $("#respaldo-azar").style.width = `${N.azar[i] * 100}%`;
   }
 
   /* -------------------------------------------------------------------- curva */

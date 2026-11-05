@@ -7,7 +7,7 @@
 <meta name="description" content="Mapa interactivo del índice de criticidad por vegetación en el piloto de Los Olivos, por alimentador y por subestación, y comparación con otros distritos de Lima Norte. Pluz Energía y UTEC.">
 <meta name="theme-color" content="#395aa1">
 <link rel="icon" href="assets/favicon.png" type="image/png">
-<link rel="stylesheet" href="css/estilos.css?v=20261102">
+<link rel="stylesheet" href="css/estilos.css?v=20261104">
 <script src="js/tema.js?v=20261102"></script>
 </head>
 <body>
@@ -165,6 +165,20 @@
     </div>
   </section>
 
+  <!-- Respaldo del plan con lo que pasó después: cambia con el tamaño del plan. Sale de
+       pipeline/etapas/negocio.py y se mide con el índice reconstruido en los meses de prueba. -->
+  <section class="respaldo" id="respaldo-plan" hidden aria-live="polite">
+    <div class="respaldo-icono"><svg class="ico" aria-hidden="true"><use href="#i-tilde"/></svg></div>
+    <div class="respaldo-cuerpo">
+      <p class="respaldo-texto" id="respaldo-texto"></p>
+      <p class="respaldo-nota" id="respaldo-nota"></p>
+    </div>
+    <div class="respaldo-barra" aria-hidden="true">
+      <div class="respaldo-pista"><span class="respaldo-azar" id="respaldo-azar"></span><span class="respaldo-valor" id="respaldo-valor"></span></div>
+      <div class="respaldo-leyenda"><span><i class="l-plan"></i>Plan</span><span><i class="l-azar"></i>Al azar</span></div>
+    </div>
+  </section>
+
   <main class="tablero">
     <section class="panel panel-mapa" aria-labelledby="titulo-mapa">
       <div class="panel-cabecera">
@@ -297,17 +311,17 @@
 <!-- D3 versión 7.9.0 servido desde el propio repositorio: la página no depende de una red
      externa y funciona igual en GitHub Pages, en un servidor local o sin conexión. -->
 <script src="js/vendor/d3.v7.9.0.min.js"></script>
-<script src="data/criticidad_los_olivos.js?v=202610192158"></script>
-<script src="data/criticidad_los_olivos_alterno.js?v=202610192158"></script>
+<script src="data/criticidad_los_olivos.js?v=202611042326"></script>
+<script src="data/criticidad_los_olivos_alterno.js?v=202611042326"></script>
 <!-- Límite del distrito y avenidas principales, de OpenStreetMap (ODbL 1.0), ya
      simplificados y guardados en el repositorio: 14 kB y ninguna petición de red. -->
-<script src="data/geografia_los_olivos.js?v=202610192158"></script>
+<script src="data/geografia_los_olivos.js?v=202611042326"></script>
 <!-- Los ocho distritos de la comparación y sus límites, de OpenStreetMap (ODbL 1.0). -->
-<script src="data/distritos.js?v=202610192158"></script>
-<script src="data/postes_mt.js?v=202610192158"></script>
-<script src="data/geografia_distritos.js?v=202610192158"></script>
+<script src="data/distritos.js?v=202611042326"></script>
+<script src="data/postes_mt.js?v=202611042326"></script>
+<script src="data/geografia_distritos.js?v=202611042326"></script>
 <script src="js/teselas.js?v=20261019"></script>
 <script src="js/comparar.js?v=20261021"></script>
-<script src="js/app.js?v=20261102"></script>
+<script src="js/app.js?v=20261104"></script>
 </body>
 </html>
