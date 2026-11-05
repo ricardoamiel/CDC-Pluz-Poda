@@ -17,7 +17,7 @@ Tres páginas en la misma dirección, con la barra de la cabecera para pasar de 
 
 ![Herramienta: plan de poda priorizado del piloto Los Olivos](docs/capturas/herramienta.png)
 
-**Benchmark.** Los modelos comparados frente a la regla por historial, con la decisión y sus métricas.
+**Benchmark.** Abre con la métrica de negocio: en la prueba, qué parte de los cortes y de los minutos de SAIDI por vegetación de los tres meses siguientes cayó en los alimentadores que la lista puso primero, frente a la regla por historial y al azar. Después, los modelos comparados con la decisión y sus métricas.
 
 ![Benchmark de modelos](docs/capturas/benchmark.png)
 

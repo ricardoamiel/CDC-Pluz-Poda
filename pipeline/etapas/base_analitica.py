@@ -40,13 +40,18 @@ def construir(tablas):
         fallas[fallas["veg_ampliada"]].groupby(["Alimentador", "periodo"]).size()
         .rename("eventos_veg"),
         fallas.groupby(["Alimentador", "periodo"]).size().rename("eventos_tot"),
+        # Minutos de SAIDI de los eventos de vegetación: no entran al modelo, sirven para medir
+        # en el benchmark cuánto de la afectación real cae en la lista priorizada.
+        pd.to_numeric(fallas.loc[fallas["veg_ampliada"], "SAIDI"], errors="coerce")
+        .groupby([fallas.loc[fallas["veg_ampliada"], "Alimentador"],
+                  fallas.loc[fallas["veg_ampliada"], "periodo"]]).sum().rename("saidi_veg"),
         poda.groupby(["ALIMENTADOR", "periodo"]).size().rename("podas"),
     ]
     for fuente in fuentes:
         panel = panel.merge(fuente, how="left", left_on=["alimentador", "periodo"],
                             right_index=True)
-    panel[["eventos_veg", "eventos_tot", "podas"]] = \
-        panel[["eventos_veg", "eventos_tot", "podas"]].fillna(0)
+    panel[["eventos_veg", "eventos_tot", "saidi_veg", "podas"]] = \
+        panel[["eventos_veg", "eventos_tot", "saidi_veg", "podas"]].fillna(0)
     panel = panel.sort_values(["alimentador", "periodo"]).reset_index(drop=True)
     g = panel.groupby("alimentador", group_keys=False)
 

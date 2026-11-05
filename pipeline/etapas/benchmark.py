@@ -502,6 +502,102 @@ def registrar_mlflow(resultados, reporte):
     return uri
 
 
+# --------------------------------------------------------------------------- métrica de negocio
+
+def metrica_negocio(panel, prueba, puntajes, piloto=(), k_concesion=40, k_piloto=10):
+    """¿La lista prioriza donde hay que podar? Mira qué pasó después en los primeros K de cada mes.
+
+    Para cada mes de prueba se toman los K alimentadores de mayor puntaje y se cuenta, en los
+    tres meses siguientes, cuántos tuvieron un corte por vegetación y qué parte de los eventos y
+    de los minutos de SAIDI por vegetación cayó en ellos. Se compara con la regla por historial
+    y con el azar. La poda real de Pluz se informa aparte, como contexto: no sirve como
+    resultado a acertar, porque reproduce la práctica actual y porque podar evita el evento.
+    """
+    h = config.HORIZONTE_MESES
+    p = panel.sort_values(["alimentador", "periodo"]).copy()
+    g = p.groupby("alimentador")
+    for col, nuevo in (("eventos_veg", "fut_ev"), ("saidi_veg", "fut_saidi"), ("podas", "fut_poda")):
+        p[nuevo] = sum(g[col].shift(-k) for k in range(1, h + 1))
+    d = prueba[["alimentador", "periodo"]].reset_index(drop=True).merge(
+        p[["alimentador", "periodo", "fut_ev", "fut_saidi", "fut_poda"]], how="left",
+        on=["alimentador", "periodo"]).fillna(0)
+    metodos = {"Modelo vigente": puntajes["Regresión logística"],
+               "Regla por historial": puntajes["Regla por historial"]}
+    piloto = set(piloto)
+    res = {}
+    for ambito, k, filtro in (("concesion", k_concesion, np.ones(len(d), bool)),
+                              ("piloto", k_piloto, d["alimentador"].isin(piloto).values)):
+        sub = d[filtro]
+        if sub.empty:
+            continue
+        meses = sorted(sub["periodo"].unique())
+        tot_ev, tot_saidi = sub["fut_ev"].sum(), sub["fut_saidi"].sum()
+        n_mes = len(sub) / len(meses)
+        out = {"k": k, "meses": [str(m) for m in meses], "alimentadores_por_mes": round(n_mes, 1),
+               "eventos_totales": float(tot_ev), "saidi_total": round(float(tot_saidi), 3),
+               "metodos": {}}
+        elegido = {}
+        for nombre, s in metodos.items():
+            s = np.asarray(s)[filtro]
+            marca = np.zeros(len(sub), bool)
+            for m in meses:
+                en_mes = np.flatnonzero((sub["periodo"] == m).values)
+                marca[en_mes[np.argsort(-s[en_mes], kind="stable")[:k]]] = True
+            elegido[nombre] = marca
+            top = sub[marca]
+            n_sel = k * len(meses)
+            out["metodos"][nombre] = {
+                "aciertos": float((top["fut_ev"] > 0).sum() / n_sel),
+                "captura_eventos": float(top["fut_ev"].sum() / tot_ev) if tot_ev else None,
+                "captura_saidi": float(top["fut_saidi"].sum() / tot_saidi) if tot_saidi else None,
+                "coincidencia_poda": float((top["fut_poda"] > 0).sum() / n_sel)}
+        # Intervalos del 95 % al remuestrear alimentadores, con la lista de cada mes fija.
+        out["intervalos"] = _intervalos_negocio(sub, elegido)
+        # Al azar: K de N alimentadores, en promedio capturan K/N de todo y aciertan la tasa base.
+        out["azar"] = {"aciertos": float((sub["fut_ev"] > 0).mean()),
+                       "captura_eventos": min(1.0, k / n_mes), "captura_saidi": min(1.0, k / n_mes),
+                       "coincidencia_poda": float((sub["fut_poda"] > 0).mean())}
+        podada = sub[sub["fut_poda"] > 0]
+        out["poda_real"] = {"alimentadores_por_mes": round(len(podada) / len(meses), 1),
+                            "aciertos": float((podada["fut_ev"] > 0).mean()) if len(podada) else None,
+                            "captura_eventos": float(podada["fut_ev"].sum() / tot_ev) if tot_ev else None,
+                            "captura_saidi": float(podada["fut_saidi"].sum() / tot_saidi) if tot_saidi else None}
+        res[ambito] = out
+    return res
+
+
+def _intervalos_negocio(sub, elegido, reps=1000, semilla=7):
+    alims = sub["alimentador"].values
+    unicos, idx = np.unique(alims, return_inverse=True)
+    def por_alim(v):
+        return np.bincount(idx, weights=v, minlength=len(unicos))
+    tot = {c: por_alim(sub[c].values) for c in ("fut_ev", "fut_saidi")}
+    sel = {n: {c: por_alim(sub[c].values * m) for c in ("fut_ev", "fut_saidi")}
+           for n, m in elegido.items()}
+    rng = np.random.default_rng(semilla)
+    muestras = rng.integers(0, len(unicos), size=(reps, len(unicos)))
+    res = {}
+    for c, nombre_c in (("fut_ev", "captura_eventos"), ("fut_saidi", "captura_saidi")):
+        den = tot[c][muestras].sum(axis=1)
+        ok = den > 0
+        cap = {n: sel[n][c][muestras].sum(axis=1)[ok] / den[ok] for n in sel}
+        q = lambda v: [float(np.percentile(v, 2.5)), float(np.percentile(v, 97.5))]  # noqa: E731
+        res[nombre_c] = {n: q(v) for n, v in cap.items()}
+        if {"Modelo vigente", "Regla por historial"} <= set(cap):
+            res[nombre_c]["diferencia_con_regla"] = q(cap["Modelo vigente"] - cap["Regla por historial"])
+    return res
+
+
+def puntajes_negocio(panel, inicio, hiperparametros_logistica):
+    """Puntajes de la regla y de la regresión logística en la prueba, sin correr todo el benchmark."""
+    part = particiones(panel, inicio)
+    prueba = part["prueba"]
+    m = CANDIDATOS["Regresión logística"]["crear"](hiperparametros_logistica).fit(
+        part["entrena"][config.VARIABLES], part["entrena"]["objetivo"])
+    return prueba, {"Regresión logística": _proba(m, prueba[config.VARIABLES]),
+                    "Regla por historial": (prueba["veg_12m"] + 0.01 * prueba["veg_hist"]).values}
+
+
 # --------------------------------------------------------------------------- orquestación
 
 def ejecutar(panel, inicio, corte, operativo, piloto=()):
@@ -580,6 +676,7 @@ def ejecutar(panel, inicio, corte, operativo, piloto=()):
             res["calibracion"][nombre] = {"x": mp.round(4).tolist(), "y": fo.round(4).tolist()}
 
     res["ganancia"] = {n: ganancia(prueba, s) for n, s in puntajes.items()}
+    res["negocio"] = metrica_negocio(panel, prueba, puntajes, piloto)
     # Primero en exhaustividad entre los modelos; la regla por historial se informa aparte
     # porque es la referencia, no un candidato.
     recall_k = {n: res["modelos"][n]["prueba"]["recall"] for n in CANDIDATOS}

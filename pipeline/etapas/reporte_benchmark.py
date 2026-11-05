@@ -141,6 +141,13 @@ ESTILOS = """
 .bm h2{margin:0 0 8px;font-size:18px;color:var(--tinta)}.bm h3{margin:6px 0;font-size:14px;color:var(--tinta)}
 .bm .intro h2{font-size:22px}
 .bm .decision{background:var(--azul-100);border-color:var(--azul-300)}
+.bm .negocio{border-top:4px solid var(--pluz-verde)}
+.kpis-neg{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:12px;margin:14px 0}
+.kpi-neg{background:var(--superficie-3);border-radius:var(--radio-s);padding:12px 14px;border-left:4px solid var(--k);display:flex;flex-direction:column;gap:3px}
+.kpi-neg b{font-size:30px;line-height:1.1;color:var(--tinta)}.kpi-neg .t{font-weight:600;color:var(--tinta)}.kpi-neg .d{font-size:12.5px;color:var(--tinta-2)}
+.grupo-neg h3{margin:4px 0 8px}.barra-neg{display:grid;grid-template-columns:150px 1fr 48px;align-items:center;gap:8px;margin:5px 0;font-size:13px}
+.barra-neg .pista{background:var(--superficie-3);border-radius:4px;height:18px;overflow:hidden}.barra-neg .relleno{display:block;height:100%;border-radius:4px}
+.barra-neg .v{font-weight:600;text-align:right}
 .tabla{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:12.5px;margin:8px 0}
 th,td{padding:6px 8px;border-bottom:1px solid var(--borde);text-align:right;white-space:nowrap}
 th:first-child,td:first-child,#ejemplos td:last-child{text-align:left}th{background:var(--superficie-3);font-weight:600}
@@ -454,6 +461,121 @@ def seccion_literatura():
             f"<ul class='literatura'>{filas}</ul></section>")
 
 
+def _p0(v):
+    return "" if v is None else f"{100 * v:.0f} %"
+
+
+def _ic(par):
+    return f"de {100 * par[0]:.0f} a {100 * par[1]:.0f} %"
+
+
+def _dif(par):
+    def signo(x):
+        v = round(100 * x)
+        return "0" if v == 0 else f"{v:+d}".replace("-", "−")
+    return f"de {signo(par[0])} a {signo(par[1])} puntos"
+
+
+PILOTO_NOMBRE = config.PILOTO.title()
+
+
+def seccion_negocio(r):
+    """Métrica de negocio, lo primero del reporte: ¿la lista prioriza donde hay que podar?"""
+    n = r.get("negocio")
+    if not n or "concesion" not in n:
+        return ""
+    lo, co = n.get("piloto"), n["concesion"]
+    meses = co["meses"]
+    periodo = f"{_mes(meses[0])} a {_mes(meses[-1])}"
+
+    def tarjeta(valor, titulo, detalle, color="var(--pluz-azul)"):
+        return (f"<div class='kpi-neg' style='--k:{color}'><b>{valor}</b><span class='t'>{titulo}</span>"
+                f"<span class='d'>{detalle}</span></div>")
+
+    tarjetas = ""
+    if lo:
+        mv, rg, az = lo["metodos"]["Modelo vigente"], lo["metodos"]["Regla por historial"], lo["azar"]
+        tarjetas += (
+            tarjeta(_p0(mv["captura_saidi"]), f"de los minutos de SAIDI por vegetación de {PILOTO_NOMBRE}",
+                    f"cayeron en los {lo['k']} alimentadores que la lista prioriza de {lo['alimentadores_por_mes']:.0f}. "
+                    f"Al azar: {_p0(az['captura_saidi'])}; regla por historial: {_p0(rg['captura_saidi'])}.")
+            + tarjeta(_p0(mv["captura_eventos"]), f"de los cortes por vegetación de {PILOTO_NOMBRE}",
+                      f"en esos mismos {lo['k']}. Al azar: {_p0(az['captura_eventos'])}; regla por historial: "
+                      f"{_p0(rg['captura_eventos'])}.", "var(--pluz-amarillo)")
+            + tarjeta(_p0(mv["coincidencia_poda"]), "de los priorizados fueron podados por Pluz",
+                      f"en los tres meses siguientes. Al azar: {_p0(az['coincidencia_poda'])}. La lista apunta "
+                      "a donde la empresa ya sabe que hay que podar.", "var(--pluz-verde)"))
+    mv, az, pr = co["metodos"]["Modelo vigente"], co["azar"], co["poda_real"]
+    tarjetas += tarjeta(_p0(mv["captura_saidi"]), "del SAIDI por vegetación de la concesión",
+                        f"con {co['k']} de {co['alimentadores_por_mes']:.0f} alimentadores por mes "
+                        f"({_p0(co['k'] / co['alimentadores_por_mes'])}). Al azar: {_p0(az['captura_saidi'])}. "
+                        f"Donde Pluz podó, unos {pr['alimentadores_por_mes']:.0f} alimentadores por mes, cayó el "
+                        f"{_p0(pr['captura_saidi'])}.", "var(--comp-3)")
+
+    def filas(amb):
+        a = n[amb]
+        out = []
+        for nombre, v in list(a["metodos"].items()) + [("Al azar", a["azar"])]:
+            out.append(f"<tr{' class=elegido' if nombre == 'Modelo vigente' else ''}><td>{nombre}</td>"
+                       f"<td>{a['k']}</td><td>{_p0(v['aciertos'])}</td><td>{_p0(v['captura_eventos'])}</td>"
+                       f"<td>{_p0(v['captura_saidi'])}</td><td>{_p0(v['coincidencia_poda'])}</td></tr>")
+        pr = a["poda_real"]
+        out.append(f"<tr><td>Donde Pluz podó</td><td>{pr['alimentadores_por_mes']:.0f}</td><td>{_p0(pr['aciertos'])}</td>"
+                   f"<td>{_p0(pr['captura_eventos'])}</td><td>{_p0(pr['captura_saidi'])}</td><td>100 %</td></tr>")
+        return "".join(out)
+
+    def tabla(amb, titulo):
+        a = n[amb]
+        return (f"<h3>{titulo}</h3><div class='tabla'><table><thead><tr><th>Lista</th><th>Alimentadores por mes</th>"
+                "<th>Tuvieron corte por vegetación</th><th>Cortes por vegetación que captura</th>"
+                "<th>SAIDI por vegetación que captura</th><th>Podados por Pluz</th></tr></thead><tbody>"
+                + filas(amb) + "</tbody></table></div>"
+                f"<p class='nota'>{a['alimentadores_por_mes']:.0f} alimentadores por mes; {a['eventos_totales']:.0f} "
+                f"cortes por vegetación en los tres meses siguientes a cada corte.</p>")
+
+    def barras():
+        filas_b = []
+        for amb, titulo in (("piloto", f"{PILOTO_NOMBRE}, plan de {lo['k'] if lo else ''}"),
+                            ("concesion", f"Concesión, lista de {co['k']}")):
+            if amb not in n:
+                continue
+            a = n[amb]
+            items = [("Modelo vigente", a["metodos"]["Modelo vigente"]["captura_saidi"], "var(--pluz-azul)"),
+                     ("Regla por historial", a["metodos"]["Regla por historial"]["captura_saidi"], "#9db1d6"),
+                     ("Al azar", a["azar"]["captura_saidi"], "var(--borde-fuerte)")]
+            filas_b.append(f"<div class='grupo-neg'><h3>{titulo}</h3>" + "".join(
+                f"<div class='barra-neg'><span class='e'>{e}</span><span class='pista'>"
+                f"<span class='relleno' style='width:{100 * v:.1f}%;background:{c}'></span></span>"
+                f"<span class='v'>{_p0(v)}</span></div>" for e, v, c in items) + "</div>")
+        return "<div class='par'>" + "".join(filas_b) + "</div>"
+
+    ic = co["intervalos"]["captura_saidi"]
+    lectura = (f"<p><b>Cómo leerlo.</b> Lo firme es que la lista concentra la afectación muy por encima del azar: "
+               f"en la concesión el modelo captura {_ic(ic['Modelo vigente'])} del SAIDI por vegetación, frente al "
+               f"{_p0(az['captura_saidi'])} del azar")
+    if lo:
+        il = lo["intervalos"]["captura_saidi"]
+        lectura += (f", y en {PILOTO_NOMBRE} {_ic(il['Modelo vigente'])}, frente al {_p0(lo['azar']['captura_saidi'])}. "
+                    f"Frente a la regla por historial, en la concesión no se distinguen ({_dif(ic['diferencia_con_regla'])}), "
+                    f"y en {PILOTO_NOMBRE} el modelo va adelante ({_dif(il['diferencia_con_regla'])}), pero con "
+                    f"{lo['eventos_totales']:.0f} cortes en la prueba la diferencia todavía no es concluyente.")
+    else:
+        lectura += "."
+    lectura += " Intervalos del 95 % al remuestrear alimentadores.</p>"
+    return f"""
+<section class="negocio"><h2>Métrica de negocio: ¿la lista prioriza donde hay que podar?</h2>
+<p>Cada mes de la prueba, de {periodo}, se toman los alimentadores que la lista pone primero y se mira qué pasó en los tres meses siguientes: cuántos tuvieron un corte por vegetación y qué parte de los cortes y de los minutos de SAIDI por vegetación cayó en ellos. Si la lista ordena bien, ahí se concentra la afectación que la poda puede evitar.</p>
+<div class="kpis-neg">{tarjetas}</div>
+<h3>SAIDI por vegetación que cae en la lista priorizada</h3>
+{barras()}
+{lectura}
+{tabla("piloto", f"{PILOTO_NOMBRE}: plan de {lo['k']} alimentadores") if lo else ""}
+{tabla("concesion", f"Concesión: lista de {co['k']} alimentadores")}
+<p class="nota"><b>Por qué no se mide contra la poda real.</b> Que la lista coincida con donde Pluz podó dice que apunta a lugares conocidos, pero no puede ser el resultado a acertar: la poda reproduce la práctica actual, y donde se podó se evitó parte de los cortes, así que esos alimentadores muestran menos de lo que habrían tenido. Por eso la métrica principal es la afectación que ocurrió después, y la poda real se muestra solo como referencia.</p>
+</section>
+"""
+
+
 def escribir(r, destino):
     d = r["decision"]
     lr = r["modelos"]["Regresión logística"]["prueba"]
@@ -517,7 +639,7 @@ def escribir(r, destino):
     modelos_ej = sorted({e["modelo"] for e in r["ejemplos"]})
     filtro = "".join(f"<button data-modelo='{html.escape(m)}'>{html.escape(m)}</button>" for m in modelos_ej)
 
-    cuerpo = f"""
+    cuerpo = seccion_negocio(r) + f"""
 <section class="intro"><h2>¿Regresión logística o un modelo más complejo?</h2>
 <p>Corte de {_mes(r['corte'])}. Entrenamiento de {_mes(part['entrena'][0])} a {_mes(part['entrena'][1])}, con elección de hiperparámetros y umbral en {_mes(part['validacion'][0])} y {_mes(part['validacion'][1])}. Prueba de {_mes(part['prueba'][0])} a {_mes(part['prueba'][1])}, con {r['positivos']['prueba']} casos positivos en {r['filas']['prueba']} filas. Ningún modelo vio la prueba al elegir nada.</p></section>
 
