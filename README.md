@@ -19,9 +19,9 @@ La versión piloto se entrega con dos documentos en Word, en la carpeta docs:
 Para la presentación final con Pluz:
 
 * **docs/Presentacion_Final_PLUZ_Grupo2.pptx.** Elevator pitch de tres minutos y presentación técnica, con notas del expositor en cada lámina, organigrama, avance de requerimientos, variables del modelo, cómo decide, benchmark y piloto de control. También en PDF.
-* **docs/Demo_Herramienta_Poda_Pluz.mp4.** Demo de un minuto de las tres páginas, con subtítulos en Demo_Herramienta_Poda_Pluz.srt y el guion de voz en off en Guion_voz_en_off_demo.txt.
+* **docs/Demo_Herramienta_Poda_Pluz.mp4.** Demo de un minuto de las tres páginas, con entrada y cierre con los logos de Pluz y UTEC, subtítulos dentro del video y el guion de voz en off en Guion_voz_en_off_demo.txt.
 
-**Piloto de control.** Con el plan armado con datos hasta mayo de 2026, y un modelo entrenado solo con lo que se sabía entonces, los planes de los ocho distritos tenían dentro el 57 % del SAIDI por vegetación de junio a agosto, frente al 34 % al azar y al 56 % de la regla por historial.
+**Piloto de control.** Con el plan armado con datos hasta mayo de 2026, y un modelo entrenado solo con lo que se sabía entonces, los planes de los ocho distritos habrían podido evitar el 57 % del SAIDI por vegetación de junio a agosto, frente al 34 % podando al azar y al 56 % con la regla por historial. Es una reducción potencial: el SAIDI de los cortes que ocurrieron en alimentadores que el plan mandaba podar.
 
 Este README resume lo esencial de los documentos.
 
