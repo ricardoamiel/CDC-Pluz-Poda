@@ -9,6 +9,68 @@ Los datos de la página se generan con el pipeline de la carpeta pipeline, que c
 Junto a la herramienta hay dos páginas más, en la misma dirección: **benchmark/**, con la comparación de modelos, que se abre con el botón Benchmark de la cabecera, y **cargar/**, para revisar el archivo semanal antes de incorporarlo.
 
 
+## Documentación de la versión piloto
+
+La versión piloto se entrega con dos documentos en Word, en la carpeta docs:
+
+* **docs/Manual_de_Usuario_Herramienta_Poda_Pluz.docx.** Manual para Pluz con capturas y recortes ampliados: instalación en Windows, macOS y Linux, casos de uso, uso e interpretación de la Herramienta y del Benchmark, carga semanal paso a paso, deshacer, publicar y solución de problemas.
+* **docs/Documentacion_Tecnica_Herramienta_Poda_Pluz.docx.** Arquitectura, contrato de datos, pipeline, modelo, índice de criticidad, página web, puente de carga, despliegue, seguridad, mantenimiento y pruebas realizadas.
+
+Para la presentación final con Pluz:
+
+* **docs/Presentacion_Final_PLUZ_Grupo2.pptx.** Elevator pitch de tres minutos y presentación técnica, con notas del expositor en cada lámina, organigrama, avance de requerimientos, variables del modelo, cómo decide, benchmark y piloto de control. También en PDF.
+* **docs/Demo_Herramienta_Poda_Pluz.mp4.** Demo de un minuto de las tres páginas, con subtítulos en Demo_Herramienta_Poda_Pluz.srt y el guion de voz en off en Guion_voz_en_off_demo.txt.
+
+**Piloto de control.** Con el plan armado con datos hasta mayo de 2026, y un modelo entrenado solo con lo que se sabía entonces, los planes de los ocho distritos tenían dentro el 57 % del SAIDI por vegetación de junio a agosto, frente al 34 % al azar y al 56 % de la regla por historial.
+
+Este README resume lo esencial de los documentos.
+
+
+## Casos de uso frecuentes
+
+Quien consulta el plan solo necesita un navegador:
+
+1. **Consultar el plan del trimestre.** Abrir la herramienta y leer los cuatro indicadores y la lista priorizada.
+2. **Revisar por qué una unidad está en el plan.** Hacer clic en ella en el mapa o en la lista y leer el detalle: índice, sus cuatro componentes y las razones del modelo.
+3. **Ajustar el plan a la capacidad de las cuadrillas.** Mover el control Tamaño del plan o el asa azul de la curva.
+4. **Ubicar una subestación, un alimentador o un poste.** Escribir su código en Buscar y cambiar el mapa a Satelital.
+5. **Descargar el plan para la programación.** Pulsar Descargar plan: un CSV que Excel abre directamente.
+6. **Comparar el piloto con otro distrito.** Abrir la pestaña Comparar distritos.
+
+Quien opera los datos necesita además la instalación de la sección siguiente:
+
+7. **Confirmar que el archivo de la semana viene bien.** Abrir la Carga semanal y arrastrar el archivo; se revisa dentro del navegador.
+8. **Cargar la semana y publicar.** Levantar el pipeline, subir el archivo, confirmar y publicar.
+9. **Deshacer una carga equivocada.** Restaurar la configuración anterior, con segunda confirmación.
+10. **Comprobar que el modelo sigue siendo confiable.** Revisar el Benchmark y la pestaña Modelo y MLflow.
+
+
+## Instalación
+
+Para consultar la herramienta no hace falta instalar nada. Para cargar los datos de cada semana, el equipo del operador necesita Python 3.10 o posterior (probado con 3.12) y Git. Los pasos son los mismos en Windows, macOS y Linux; el manual de usuario muestra la orden exacta de cada sistema, con capturas.
+
+1. Clonar este repositorio con git clone y entrar a su carpeta.
+2. Crear un entorno virtual llamado .venv con el módulo venv de Python y activarlo. En macOS y Linux:
+   ```
+   source .venv/bin/activate
+   ```
+   En Windows PowerShell:
+   ```
+   .venv\Scripts\Activate.ps1
+   ```
+3. Instalar las bibliotecas:
+   ```
+   python pipeline/actualizar.py instalar
+   ```
+4. Copiar las carpetas **pipeline/datos** y **pipeline/salidas** desde el equipo que ya opera la herramienta. No vienen con el repositorio porque tienen los archivos de Pluz y nunca se publican.
+5. Comprobar la instalación. La última línea debe decir que los lotes cumplen el contrato de datos:
+   ```
+   python pipeline/actualizar.py validar
+   ```
+
+La instalación se probó en limpio el 5 de noviembre de 2026 con Python 3.12 en Ubuntu. Una copia sin el paso 4 se ve, pero no se puede actualizar: validar avisa que no existe la carpeta de lotes.
+
+
 ## Cómo se ve
 
 Tres páginas en la misma dirección, con la barra de la cabecera para pasar de una a otra: Herramienta, Benchmark y Carga semanal. El botón de la derecha cambia el tema: claro, que es el de partida, el del sistema u oscuro.
@@ -151,6 +213,8 @@ Los Excel de Pluz nunca se publican: se quedan en el equipo que corre el pipelin
 * **docs/PRUEBA_DE_USUARIO.md.** Recorrido de la herramienta en el papel de un usuario de Pluz sin formación técnica: lo fuerte y las mejoras por prioridad. Las mejoras rápidas ya están aplicadas.
 * **docs/Presentacion_Cambios_Reunion3_Semana_11.pptx.** Presentación del modelo de contraste, la prueba de usuario y las mejoras aplicadas.
 * **docs/FEEDBACK_REUNION3.md.** Todo lo que pidieron Pluz y el asesor desde la reunión N°3, con su estado.
+* **docs/Manual_de_Usuario_Herramienta_Poda_Pluz.docx.** Manual de usuario de la versión piloto.
+* **docs/Documentacion_Tecnica_Herramienta_Poda_Pluz.docx.** Documentación técnica de la versión piloto.
 * **docs/Informe_Respuesta_Reunion3_Pluz.docx.** Informe para Pluz: las sugerencias atendidas, el modelo y sus variables, dónde acierta y dónde se equivoca, y los datos que hacen falta para escalar.
 * **papers.** Literatura que respalda cada decisión del método, en papers/README.md. Los PDF se quedan en el equipo.
 * **benchmark.** Reporte interactivo del benchmark de modelos, que se abre con el botón Benchmark. Lo reescribe la orden benchmark del pipeline.
@@ -190,4 +254,4 @@ Sobre ese límite se construye un teselado de Voronoi de las subestaciones aére
 
 ## Alcance
 
-Es una herramienta de apoyo a la decisión sobre el último corte de datos. No autoriza trabajos ni reemplaza la inspección en campo. Las subestaciones compactas y subterráneas se dibujan en gris porque no están expuestas a interferencia de vegetación. El índice no está validado contra resultados: sus pesos son una propuesta con análisis de sensibilidad, y esa validación es el objetivo del testeo de la reunión N°4.
+Es una herramienta de apoyo a la decisión sobre el último corte de datos. No autoriza trabajos ni reemplaza la inspección en campo. Las subestaciones compactas y subterráneas se dibujan en gris porque no están expuestas a interferencia de vegetación. En la reunión N°4 Pluz dio por validados el modelo y la herramienta. Los pesos del índice siguen siendo una propuesta con análisis de sensibilidad: validarlos con resultados de campo, programando un trimestre con la lista, es el siguiente paso.

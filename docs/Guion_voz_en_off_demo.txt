@@ -1,0 +1,46 @@
+Guion de voz en off. Demo de la herramienta de priorización de poda, 60 segundos
+
+Video: Demo_Herramienta_Poda_Pluz.mp4. Subtítulos con los mismos tiempos: Demo_Herramienta_Poda_Pluz.srt.
+Ritmo: unas 150 palabras en total, a velocidad de conversación. Cada bloque empieza cuando cambia el subtítulo.
+
+0:00 a 0:03
+Esta es la herramienta de poda priorizada para el piloto de Los Olivos, con el plan del próximo trimestre.
+
+0:03 a 0:08
+Arriba, cuatro indicadores: cuántos alimentadores entran al plan, a cuántos clientes protegen, cuánto SAIDI y cuántos cortes por vegetación reúnen.
+
+0:08 a 0:11
+Esta franja lo respalda con lo que pasó: en la prueba, un plan así concentró tres cuartas partes del SAIDI por vegetación.
+
+0:11 a 0:16
+En el mapa, cada celda es una subestación. Al pasar el puntero vemos su ficha.
+
+0:16 a 0:17
+Con un clic la fijamos en todas las vistas.
+
+0:17 a 0:22
+El detalle explica su puesto: riesgo, tiempo sin poda, SAIDI y clientes, que suman el índice.
+
+0:22 a 0:28
+Si las cuadrillas alcanzan para más, movemos el tamaño del plan y todo se recalcula.
+
+0:28 a 0:33
+El buscador encuentra un alimentador por su código y los indicadores pasan a describir solo ese.
+
+0:33 a 0:38
+La vista satelital muestra calles y postes, para planificar el acceso.
+
+0:38 a 0:42
+Y el plan se descarga en un archivo que Excel abre directamente.
+
+0:42 a 0:48
+Podemos comparar Los Olivos con otros siete distritos de Lima Norte, en la misma escala.
+
+0:48 a 0:52
+El Benchmark muestra que la lista concentra mucho más SAIDI que el azar.
+
+0:52 a 0:58
+Y cada semana, el archivo de Pluz se revisa aquí antes de actualizar la herramienta.
+
+0:58 a 1:00
+Podar antes del corte, no después.
