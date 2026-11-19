@@ -224,6 +224,21 @@ img { max-width: 100%; }
   :root:not([data-theme]) .navegacion a[aria-current="page"] { color: var(--azul-700); }
 }
 .cabecera-acciones { flex-wrap: wrap; }
+/* Enlaces al recorrido del proyecto y a la presentación final, junto a la navegación. */
+.enlaces-proyecto { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.enlaces-proyecto a {
+  display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: var(--radio-s);
+  font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap;
+  border: 1px solid var(--azul-600); color: var(--azul-600); background: transparent;
+}
+.enlaces-proyecto a .ico { width: 15px; height: 15px; }
+.enlaces-proyecto a:hover { background: var(--azul-050, rgba(57, 90, 161, .08)); }
+.enlaces-proyecto a.destacado { background: var(--azul-600); color: #fff; }
+.enlaces-proyecto a.destacado:hover { background: var(--azul-700); }
+:root[data-theme="dark"] .enlaces-proyecto a:not(.destacado) { color: var(--azul-700); border-color: var(--azul-700); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .enlaces-proyecto a:not(.destacado) { color: var(--azul-700); border-color: var(--azul-700); }
+}
 
 /* --------------------------------------------------------------- controles */
 .boton, .boton-icono {
