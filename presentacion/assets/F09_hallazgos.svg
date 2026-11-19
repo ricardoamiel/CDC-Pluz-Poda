@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="892.776284pt" height="394.348312pt" viewBox="0 0 892.776284 394.348312" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-11-19T18:39:07.774251</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.1, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 394.348312 
+L 892.776284 394.348312 
+L 892.776284 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 7.2 352.703 
+L 233.416216 352.703 
+L 233.416216 42.239 
+L 7.2 42.239 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 17.482555 352.703 
+L 96.188534 352.703 
+L 96.188534 103.658938 
+L 17.482555 103.658938 
+z
+" clip-path="url(#p9a2e985f8c)" style="fill: #6cac5e"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 144.427682 352.703 
+L 223.133661 352.703 
+L 223.133661 183.512308 
+L 144.427682 183.512308 
+z
+" clip-path="url(#p9a2e985f8c)" style="fill: #d5dae3"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m840c217dc3" d="M 0 0 
+L 0 3.5 
+" style="stroke: #131a26; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m840c217dc3" x="56.835545" y="352.703" style="fill: #131a26; stroke: #131a26; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 13px; font-family: 'Liberation Sans', 'DejaVu Sans'; text-anchor: middle; fill: #131a26" x="56.835545" y="369.276281" transform="rotate(-0 56.835545 369.276281)">Vegetación</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m840c217dc3" x="183.780672" y="352.703" style="fill: #131a26; stroke: #131a26; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 13px; font-family: 'Liberation Sans', 'DejaVu Sans'; text-anchor: middle; fill: #131a26" x="183.780672" y="369.123937" transform="rotate(-0 183.780672 369.123937)">Otras causas</text>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2"/>
+   <g id="patch_5">
+    <path d="M 7.2 352.703 
+L 233.416216 352.703 
+" style="fill: none; stroke: #8a94a6; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_3">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'Liberation Sans', 'DejaVu Sans'; text-anchor: middle" x="56.835545" y="97.122854" transform="rotate(-0 56.835545 97.122854)">7,6 h</text>
+   </g>
+   <g id="text_4">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'Liberation Sans', 'DejaVu Sans'; text-anchor: middle" x="183.780672" y="176.976224" transform="rotate(-0 183.780672 176.976224)">5,2 h</text>
+   </g>
+   <g id="text_5">
+    <text style="font-weight: 700; font-size: 16px; font-family: 'Liberation Sans', 'DejaVu Sans'" transform="translate(7.2 19.005)">Cada corte tarda 47 % más</text>
+    <text style="font-weight: 700; font-size: 16px; font-family: 'Liberation Sans', 'DejaVu Sans'" transform="translate(7.2 36.239)">en reponerse</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_6">
+    <path d="M 312.591892 352.703 
+L 538.808108 352.703 
+L 538.808108 42.239 
+L 312.591892 42.239 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 322.874447 352.703 
+L 401.580426 352.703 
+L 401.580426 300.640575 
+L 322.874447 300.640575 
+z
+" clip-path="url(#paca202aa76)" style="fill: #6cac5e"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 449.819574 352.703 
+L 528.525553 352.703 
+L 528.525553 87.614508 
+L 449.819574 87.614508 
+z
+" clip-path="url(#paca202aa76)" style="fill: #fcc13f"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m840c217dc3" x="362.227437" y="352.703" style="fill: #131a26; stroke: #131a26; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 13px; font-family: 'Liberation Sans', 'DejaVu Sans'; fill: #131a26" transform="translate(330.061577 369.276281)">Vegetación</text>
+      <text style="font-size: 13px; font-family: 'Liberation Sans', 'DejaVu Sans'; fill: #131a26" transform="translate(330.075796 383.278906)">confirmada</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m840c217dc3" x="489.172563" y="352.703" style="fill: #131a26; stroke: #131a26; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 13px; font-family: 'Liberation Sans', 'DejaVu Sans'; fill: #131a26" transform="translate(458.822642 369.123937)">Sin causa,</text>
+      <text style="font-size: 13px; font-family: 'Liberation Sans', 'DejaVu Sans'; fill: #131a26" transform="translate(452.315532 383.126562)">en red aérea</text>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4"/>
+   <g id="patch_9">
+    <path d="M 312.591892 352.703 
+L 538.808108 352.703 
+" style="fill: none; stroke: #8a94a6; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_8">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'Liberation Sans', 'DejaVu Sans'; text-anchor: middle" x="362.227437" y="294.670114" transform="rotate(-0 362.227437 294.670114)">218</text>
+   </g>
+   <g id="text_9">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'Liberation Sans', 'DejaVu Sans'; text-anchor: middle" x="489.172563" y="81.644046" transform="rotate(-0 489.172563 81.644046)">1.110</text>
+   </g>
+   <g id="text_10">
+    <text style="font-weight: 700; font-size: 16px; font-family: 'Liberation Sans', 'DejaVu Sans'" transform="translate(312.591892 19.005)">Por cada corte confirmado,</text>
+    <text style="font-weight: 700; font-size: 16px; font-family: 'Liberation Sans', 'DejaVu Sans'" transform="translate(312.591892 36.239)">5 sin causa asignada</text>
+   </g>
+  </g>
+  <g id="axes_3">
+   <g id="patch_10">
+    <path d="M 617.983784 352.703 
+L 844.2 352.703 
+L 844.2 42.239 
+L 617.983784 42.239 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 628.266339 352.703 
+L 676.931868 352.703 
+L 676.931868 288.351008 
+L 628.266339 288.351008 
+z
+" clip-path="url(#p098a478517)" style="fill: #d5dae3"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 706.759127 352.703 
+L 755.424656 352.703 
+L 755.424656 220.540827 
+L 706.759127 220.540827 
+z
+" clip-path="url(#p098a478517)" style="fill: #9db4dd"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 785.251916 352.703 
+L 833.917445 352.703 
+L 833.917445 103.124537 
+L 785.251916 103.124537 
+z
+" clip-path="url(#p098a478517)" style="fill: #395aa1"/>
+   </g>
+   <g id="matplotlib.axis_5">
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#m840c217dc3" x="652.599103" y="352.703" style="fill: #131a26; stroke: #131a26; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 13px; font-family: 'Liberation Sans', 'DejaVu Sans'; text-anchor: middle; fill: #131a26" x="652.599103" y="369.123937" transform="rotate(-0 652.599103 369.123937)">Nunca</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m840c217dc3" x="731.091892" y="352.703" style="fill: #131a26; stroke: #131a26; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 13px; font-family: 'Liberation Sans', 'DejaVu Sans'; text-anchor: middle; fill: #131a26" x="731.091892" y="369.123937" transform="rotate(-0 731.091892 369.123937)">Antes</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#m840c217dc3" x="809.58468" y="352.703" style="fill: #131a26; stroke: #131a26; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 13px; font-family: 'Liberation Sans', 'DejaVu Sans'; text-anchor: middle; fill: #131a26" x="809.58468" y="369.123937" transform="rotate(-0 809.58468 369.123937)">Último año</text>
+     </g>
+    </g>
+    <g id="text_14">
+     <text style="font-size: 12px; font-family: 'Liberation Sans', 'DejaVu Sans'; text-anchor: middle; fill: #131a26" x="731.091892" y="384.658312" transform="rotate(-0 731.091892 384.658312)">Cortes por vegetación del alimentador</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_6"/>
+   <g id="patch_14">
+    <path d="M 617.983784 352.703 
+L 844.2 352.703 
+" style="fill: none; stroke: #8a94a6; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_15">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'Liberation Sans', 'DejaVu Sans'; text-anchor: middle" x="652.599103" y="281.451808" transform="rotate(-0 652.599103 281.451808)">7 %</text>
+   </g>
+   <g id="text_16">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'Liberation Sans', 'DejaVu Sans'; text-anchor: middle" x="731.091892" y="213.641627" transform="rotate(-0 731.091892 213.641627)">15 %</text>
+   </g>
+   <g id="text_17">
+    <text style="font-weight: 700; font-size: 17px; font-family: 'Liberation Sans', 'DejaVu Sans'; text-anchor: middle" x="809.58468" y="96.225337" transform="rotate(-0 809.58468 96.225337)">29 %</text>
+   </g>
+   <g id="text_18">
+    <text style="font-weight: 700; font-size: 16px; font-family: 'Liberation Sans', 'DejaVu Sans'" transform="translate(617.983784 18.935)">Donde ya hubo vegetación, vuelve:</text>
+    <text style="font-weight: 700; font-size: 16px; font-family: 'Liberation Sans', 'DejaVu Sans'" transform="translate(617.983784 36.239)">riesgo de corte en 3 meses</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p9a2e985f8c">
+   <rect x="7.2" y="42.239" width="226.216216" height="310.464"/>
+  </clipPath>
+  <clipPath id="paca202aa76">
+   <rect x="312.591892" y="42.239" width="226.216216" height="310.464"/>
+  </clipPath>
+  <clipPath id="p098a478517">
+   <rect x="617.983784" y="42.239" width="226.216216" height="310.464"/>
+  </clipPath>
+ </defs>
+</svg>

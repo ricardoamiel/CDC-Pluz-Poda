@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Presentación Pluz</title><link rel="icon" href="assets/isotipo_utec.png"><link rel="stylesheet" href="assets/estilos.css"></head>
+<body><main class="escena"><section class="lamina portada" style="background-image:url(assets/portada_fondo.jpg)">
+  <div class="t"><h1>Poda priorizada por riesgo de vegetación</h1><p>Hallazgos, solución, demo y beneficios</p></div>
+  <div class="equipo">Ricardo Amiel Acuña Villogas<br>César Eduardo Pajuelo Reyes<br>Angello Giovani Soldi Cataño<br>Josué Nehemías Velo Poma<br>Paolo Medrano Terán</div>
+  <div class="logos"><img src="assets/logo_utec.png" alt="UTEC"><img src="assets/logo_pluz.png" alt="Pluz Energía"></div>
+  <div class="pie">Grupo 2 · DS5045 Ciencia de Datos Computacionales<br>Pluz Energía y UTEC · noviembre de 2026</div>
+  <template class="nota">10 s. Buenos días, somos el grupo 2. Primero un pitch de tres minutos y luego los hallazgos y la demo.</template></section>
+<section class="lamina presentacion"><img class="isotipo" src="assets/isotipo_utec.png" alt=""><img class="trama" src="assets/trama.png" alt="">
+    <div class="interior"><div class="etiqueta et-presentacion">Presentación 7/14</div>
+      <h1>Equipo del proyecto</h1><div class="cuerpo"><div class="org" style="margin-top:10px">
+    <div class="fila f" style="justify-content:space-between">
+      <div class="nodo c-oscuro" style="width:460px"><b>Pluz Energía · Responsable del proyecto</b><span>Jhon Flores Bardales<br>Coordinador Mantenimiento Distribución</span></div>
+      <div class="nodo c-gris" style="width:350px"><b>UTEC</b><span>Prof. Edson Luque · Colaboratorio</span></div></div>
+    <div class="f" style="display:flex;justify-content:center;margin:16px 0"><div class="nodo c-acento" style="width:420px"><b>Ricardo Amiel Acuña Villogas</b><span>Líder de proyecto y enlace con Pluz</span></div></div>
+    <div class="fila f"><div class="rol" style="flex:1"><b>César Eduardo Pajuelo Reyes</b><i>Datos y visualización</i></div><div class="rol" style="flex:1"><b>Angello Giovani Soldi Cataño</b><i>Integración y exploración</i></div><div class="rol" style="flex:1"><b>Josué Nehemías Velo Poma</b><i>Ciencia de datos y ML</i></div><div class="rol" style="flex:1"><b>Paolo Medrano Terán</b><i>Analista de negocio</i></div></div>
+    <div class="f" style="margin-top:26px"><div style="font-weight:bold;font-size:19px;color:var(--acento-os);margin-bottom:10px">Quién usa el resultado en Pluz</div>
+      <div class="fila"><div class="caja c-clara" style="flex:1;text-align:center"><h3 style="font-size:18px;color:var(--acento-os)">Planificación de mantenimiento</h3><p style="font-size:16px">Usuario clave</p></div><div class="caja c-clara" style="flex:1;text-align:center"><h3 style="font-size:18px;color:var(--acento-os)">Contratistas: Dominion, Cobra, Lari y PA</h3><p style="font-size:16px">Ejecutan la poda</p></div><div class="caja c-clara" style="flex:1;text-align:center"><h3 style="font-size:18px;color:var(--acento-os)">Centro de control y operaciones</h3><p style="font-size:16px">Usa el resultado</p></div></div></div>
+  </div></div></div><template class="nota">20 s. En Pluz, el responsable es Jhon Flores Bardales. Planificación usa el plan, los contratistas lo ejecutan y el centro de control sigue el SAIDI. Somos un líder y cuatro roles.</template></section>
+<section class="lamina presentacion"><img class="isotipo" src="assets/isotipo_utec.png" alt=""><img class="trama" src="assets/trama.png" alt="">
+    <div class="interior"><div class="etiqueta et-presentacion">Presentación 8/14</div>
+      <h1>Lo que encontramos en los datos</h1><div class="cuerpo">
+    <div class="fig f zoom" style="width:1090px;margin-top:10px"><img src="assets/F09_hallazgos.svg" alt=""><div class="marca f" style="left:0%;top:0%;width:33%;height:100%"></div><div class="marca f" style="left:34%;top:0%;width:32%;height:100%"></div><div class="marca f" style="left:67%;top:0%;width:33%;height:100%"></div></div>
+    <div class="nota-pie f">Por eso el modelo cuenta los cortes sin causa en red aérea y mira el historial de cada alimentador</div></div></div><template class="nota">50 s. Tres hallazgos. Los cortes por vegetación tardan 47 % más en reponerse. Por cada corte confirmado hay cinco sin causa en red aérea: por eso los contamos. Y donde ya hubo vegetación, vuelve: el riesgo pasa de 7 % a 29 %.</template></section>
+<section class="lamina presentacion"><img class="isotipo" src="assets/isotipo_utec.png" alt=""><img class="trama" src="assets/trama.png" alt="">
+    <div class="interior"><div class="etiqueta et-presentacion">Presentación 9/14</div>
+      <h1>Cómo funciona la solución</h1><div class="cuerpo">
+    <div class="diagrama">
+      <div class="col f izq" style="width:300px;gap:12px"><div class="mini">Cuatro señales</div>
+        <div class="bloque c-acento">Memoria de vegetación</div><div class="bloque c-verde">Vegetación reciente</div><div class="bloque c-oscuro">Fragilidad del circuito</div><div class="bloque c-gris">Temporada</div></div>
+      <span class="flecha f">➜</span>
+      <div class="col" style="width:250px;gap:22px">
+        <div class="bloque alto c-acento f"><small>Modelo</small>Riesgo de corte a 3 meses</div>
+        <div class="bloque alto c-amarillo f">Tiempo sin poda<br>SAIDI<br>Clientes</div></div>
+      <span class="flecha f">➜</span>
+      <div class="bloque alto c-oscuro f" style="width:190px">Índice<small>de 0 a 100</small></div>
+      <span class="flecha f">➜</span>
+      <div class="bloque alto c-verde f" style="width:190px">Plan<small>en el mapa</small></div>
+    </div>
+    <div class="nota-pie f">Índice = 40 % riesgo + 20 % tiempo sin poda + 20 % SAIDI + 20 % clientes</div></div></div><template class="nota">45 s. Cuatro señales alimentan el modelo, que da el riesgo de corte a tres meses. El índice suma tiempo sin poda, SAIDI y clientes, y el resultado es el plan en el mapa.</template></section>
+<section class="lamina presentacion"><img class="isotipo" src="assets/isotipo_utec.png" alt=""><img class="trama" src="assets/trama.png" alt="">
+    <div class="interior"><div class="etiqueta et-presentacion">Presentación 10/14</div>
+      <h1>Cómo decide el modelo</h1><p class="sub">Riesgo de un alimentador típico al mover una sola señal</p><div class="cuerpo">
+    <div class="fig f zoom" style="width:1090px"><img src="assets/F05_efectos.svg" alt=""><div class="marca f" style="left:51%;top:2%;width:24%;height:96%"></div><div class="marca f" style="left:3%;top:2%;width:47%;height:96%"></div></div>
+    <div style="margin-top:12px"><ul class="vin lista-foco xl"><li class="f"><b>Más interrupciones o más cortes por vegetación: </b>siempre más riesgo.</li><li class="f"><b>La temporada </b>casi no cambia el riesgo en Lima.</li></ul></div></div></div><template class="nota">40 s. Así decide: al subir las interrupciones o los cortes por vegetación, el riesgo siempre sube. La temporada casi no cambia en Lima. Si preguntan por las dos señales de vegetación: son dos ventanas de la misma señal, con correlación 0,87 y VIF 4,3, bajo el umbral de 5; se leen juntas.</template></section>
+<section class="lamina demo"><img class="isotipo" src="assets/isotipo_utec.png" alt=""><img class="trama" src="assets/trama.png" alt="">
+    <div class="interior"><div class="etiqueta et-demo">Demo</div>
+      <h1>Demo: la herramienta en un minuto y medio</h1><div class="cuerpo">
+    <div class="fila" style="gap:24px">
+      <div class="f zoom" style="width:860px"><video class="video-demo" src="../docs/Demo_Herramienta_Poda_Pluz.mp4" poster="assets/demo_portada.png" controls preload="metadata" playsinline></video></div>
+      <div class="col" style="flex:1;align-items:center;gap:10px;padding-top:10px">
+        <img class="qr f zoom" src="assets/qr.png" style="width:200px" alt="Código QR de la herramienta">
+        <b class="f" style="font-size:18px">Escanee para abrirla</b><span class="f" style="color:var(--gris)">Sin instalar nada</span>
+      </div></div>
+    <a class="enlace f" href="https://ricardoamiel.github.io/CDC-Pluz-Poda/" target="_blank" rel="noopener" style="margin-top:14px">https://ricardoamiel.github.io/CDC-Pluz-Poda/</a></div></div><template class="nota">1 min 40 s. Demo: cómo se ingresa, el plan, el mapa con postes y satelital, el tamaño del plan, el detalle, la búsqueda, la descarga, la comparación de distritos y la carga semanal.</template></section>
+<section class="lamina presentacion"><img class="isotipo" src="assets/isotipo_utec.png" alt=""><img class="trama" src="assets/trama.png" alt="">
+    <div class="interior"><div class="etiqueta et-presentacion">Presentación 11/14</div>
+      <h1>Beneficio: 57 % del SAIDI por vegetación era evitable</h1><p class="sub">Plan de mayo frente a lo ocurrido de junio a agosto</p><div class="cuerpo">
+    <div class="fila" style="gap:30px"><div class="fig f zoom" style="width:680px"><img src="assets/F03_control_acumulado.svg" alt=""><div class="marca f" style="left:84%;top:42%;width:10%;height:15%"></div></div>
+    <div class="col" style="flex:1;gap:34px;padding-top:24px">
+      <div class="numero xl  f"><b><span class="cuenta" data-valor="3.8739135995360607" data-dec="2" data-suf=" min" data-pre="">3,87 min</span></b><span>de 6,78 min, en los 8 distritos</span></div>
+      <div class="numero xl verde f"><b><span class="cuenta" data-valor="1.6948300894498987" data-dec="1" data-suf="×" data-pre="">1,7×</span></b><span>más que podar al azar</span></div>
+      <div class="numero xl oscuro f"><b>32 de 60</b><span>cortes dentro del plan</span></div>
+    </div></div></div></div><template class="nota">50 s. Beneficio: con el plan de mayo, 3,87 de 6,78 minutos de SAIDI por vegetación de junio a agosto eran evitables, 1,7 veces el azar. Si preguntan por la regla por historial, está en el anexo A1.</template></section>
+<section class="lamina presentacion"><img class="isotipo" src="assets/isotipo_utec.png" alt=""><img class="trama" src="assets/trama.png" alt="">
+    <div class="interior"><div class="etiqueta et-presentacion">Presentación 12/14</div>
+      <h1>Supera al azar en 6 de los 8 distritos</h1><p class="sub">Porcentaje del SAIDI por vegetación que el plan habría podido evitar</p><div class="cuerpo">
+    <div class="fila" style="gap:26px"><div class="fig f zoom" style="width:780px"><img src="assets/F04_control_distrito.svg" alt=""></div>
+    <div style="flex:1;padding-top:30px"><ul class="vin lista-foco grande"><li class="f"><b>Ventanilla 77 %, </b>San Juan de Lurigancho 68 %, Callao 59 %.</li><li class="f"><b>Los Olivos </b>casi sin cortes en esos meses: 74 % de enero a mayo.</li></ul></div></div></div></div><template class="nota">40 s. Por distrito supera al azar en seis de ocho. Los Olivos casi no tuvo cortes en esos meses; de enero a mayo, el 74 %.</template></section>
+<section class="lamina presentacion"><img class="isotipo" src="assets/isotipo_utec.png" alt=""><img class="trama" src="assets/trama.png" alt="">
+    <div class="interior"><div class="etiqueta et-presentacion">Presentación 13/14</div>
+      <h1>Avance y próximos pasos</h1><div class="cuerpo">
+    <div class="f"><div class="mini" style="color:var(--verde)">6 de 6 sprints entregados</div>
+      <div class="fila" style="gap:8px"><div class="sprint-chip"><small>Sprint 1</small>Datos</div><div class="sprint-chip"><small>Sprint 2</small>Hallazgos</div><div class="sprint-chip"><small>Sprint 3</small>Prototipo</div><div class="sprint-chip"><small>Sprint 4</small>8 sugerencias de Pluz</div><div class="sprint-chip"><small>Sprint 5</small>Carga semanal</div><div class="sprint-chip"><small>Sprint 6</small>Piloto y entrega</div></div></div>
+    <div class="f" style="margin-top:30px"><div class="mini" style="color:var(--acento)">Lo que sigue, con Pluz</div>
+      <div class="fila"><div class="caja c-clara" style="flex:1;min-height:140px"><h3 style="color:var(--acento-os);font-size:21px">Marcar cada poda</h3><p style="font-size:17px">preventiva o correctiva</p></div><div class="caja c-clara" style="flex:1;min-height:140px"><h3 style="color:var(--acento-os);font-size:21px">Validar en campo</h3><p style="font-size:17px">un trimestre con la lista</p></div><div class="caja c-clara" style="flex:1;min-height:140px"><h3 style="color:var(--acento-os);font-size:21px">Bajar al tramo</h3><p style="font-size:17px">con el maestro de estructuras</p></div><div class="caja c-clara" style="flex:1;min-height:140px"><h3 style="color:var(--acento-os);font-size:21px">Operar en Pluz</h3><p style="font-size:17px">en sus instalaciones</p></div></div></div>
+    <div class="nota-pie f">Entregados: versión piloto, manual de usuario, documentación técnica e informe final</div></div></div><template class="nota">40 s. Los seis sprints están entregados. Lo que sigue, con Pluz: marcar cada poda, validar en campo, bajar al tramo y operar en sus instalaciones.</template></section>
+<section class="lamina presentacion"><img class="isotipo" src="assets/isotipo_utec.png" alt=""><img class="trama" src="assets/trama.png" alt="">
+    <div class="interior"><div class="etiqueta et-presentacion">Presentación 14/14</div>
+      <h1>Gracias</h1><p class="sub">Preguntas y comentarios</p><div class="cuerpo">
+    <div class="fila" style="gap:40px;align-items:center;margin-top:20px">
+      <div class="col" style="flex:1">
+        <div class="fila f" style="align-items:center"><b style="width:180px;font-size:18px">Herramienta</b><a class="enlace" style="flex:1;text-align:left" href="https://ricardoamiel.github.io/CDC-Pluz-Poda/" target="_blank" rel="noopener">https://ricardoamiel.github.io/CDC-Pluz-Poda/</a></div><div class="fila f" style="align-items:center"><b style="width:180px;font-size:18px">Benchmark</b><a class="enlace" style="flex:1;text-align:left" href="https://ricardoamiel.github.io/CDC-Pluz-Poda/benchmark/" target="_blank" rel="noopener">https://ricardoamiel.github.io/CDC-Pluz-Poda/benchmark/</a></div><div class="fila f" style="align-items:center"><b style="width:180px;font-size:18px">Carga semanal</b><a class="enlace" style="flex:1;text-align:left" href="https://ricardoamiel.github.io/CDC-Pluz-Poda/cargar/" target="_blank" rel="noopener">https://ricardoamiel.github.io/CDC-Pluz-Poda/cargar/</a></div><div class="fila f" style="align-items:center"><b style="width:180px;font-size:18px">Cómo lo hicimos</b><a class="enlace" style="flex:1;text-align:left" href="https://ricardoamiel.github.io/CDC-Pluz-Poda/proyecto/" target="_blank" rel="noopener">https://ricardoamiel.github.io/CDC-Pluz-Poda/proyecto/</a></div>
+      </div>
+      <img class="qr f zoom" src="assets/qr.png" style="width:230px" alt="Código QR de la herramienta"></div>
+    <div class="cierre f zoom" style="margin-top:46px;font-size:40px">De podar por calendario a podar por riesgo.</div></div></div><template class="nota">Gracias. Quedamos atentos a sus preguntas.</template></section>
+<section class="lamina anexo"><img class="isotipo" src="assets/isotipo_utec.png" alt=""><img class="trama" src="assets/trama.png" alt="">
+    <div class="interior"><div class="etiqueta et-anexo">Anexo A1</div>
+      <h1>¿Y si solo usamos la regla por historial?</h1><div class="cuerpo">
+    <div class="fila" style="gap:26px">
+      <div class="col" style="width:520px">
+        <div class="caja c-hueso f izq"><h3 style="color:var(--acento-os)">La regla por historial</h3><p>Ordena los alimentadores por sus cortes por vegetación del último año y desempata con los de 2024 en adelante. Es lo que se haría con una hoja de cálculo.</p></div>
+        <div class="f"><div style="font-weight:bold;margin-bottom:6px">De 99 alimentadores en los planes de los 8 distritos:</div>
+          <div class="barra-reglas"><div class="ambos" style="width:73.73737373737374%">73 los eligen ambos</div><div class="dist" style="width:26.262626262626263%">26 distintos</div></div></div>
+        <ul class="vin lista-foco "><li class="f"><b>Donde difieren, empatan: </b>0,59 frente a 0,53 min de SAIDI.</li><li class="f"><b>Ninguno llega al resto: </b>1,47 min (22 %) en alimentadores sin cortes por vegetación en el último año.</li></ul>
+      </div>
+      <div class="col" style="flex:1;gap:10px">
+        <div class="f" style="font-weight:bold;font-size:20px;color:var(--verde)">Lo que la regla no hace y la herramienta sí</div>
+        <div class="caja c-verdecl f"><h3 style="font-size:17px;color:var(--acento-os)">Pondera el impacto</h3><p style="font-size:15px">SAIDI, clientes y tiempo sin poda, no solo cortes.</p></div><div class="caja c-verdecl f"><h3 style="font-size:17px;color:var(--acento-os)">Da una probabilidad</h3><p style="font-size:15px">Calibrada y auditada cada semana.</p></div><div class="caja c-verdecl f"><h3 style="font-size:17px;color:var(--acento-os)">Se vigila sola</h3><p style="font-size:15px">Compara su orden con la regla y avisa.</p></div><div class="caja c-verdecl f"><h3 style="font-size:17px;color:var(--acento-os)">Puede crecer</h3><p style="font-size:15px">Con poda preventiva o correctiva y causas reetiquetadas.</p></div>
+      </div></div>
+    <div class="nota-pie f">La regla es el piso: si el modelo cae más de 10 puntos bajo ella, no se publica</div></div></div><template class="nota">Anexo. La regla ordena por cortes del último año. Plan y regla eligen 73 de 99 alimentadores y donde difieren empatan. La herramienta agrega impacto, una probabilidad auditada, vigilancia y capacidad de crecer; la regla queda como piso.</template></section>
+<section class="lamina anexo"><img class="isotipo" src="assets/isotipo_utec.png" alt=""><img class="trama" src="assets/trama.png" alt="">
+    <div class="interior"><div class="etiqueta et-anexo">Anexo A2</div>
+      <h1>Cómo se separaron los datos</h1><p class="sub">Entrenamiento, separación y prueba, sin mirar el futuro</p><div class="cuerpo">
+    <div class="fig f zoom" style="width:1090px"><img src="assets/F07_validacion.svg" alt=""></div>
+    <div style="margin-top:16px"><ul class="vin lista-foco grande"><li class="f"><b>Objetivo: </b>al menos un corte por vegetación, o sin causa en red aérea, en los 3 meses siguientes, por alimentador.</li><li class="f"><b>Entrenamiento </b>con 2025; tres meses de separación para que ninguna ventana se cruce con la prueba.</li><li class="f"><b>Prueba 1: </b>enero a mayo de 2026, mes a mes. Prueba 2: plan de mayo frente a junio a agosto.</li></ul></div></div></div><template class="nota">Anexo. Entrenamiento con 2025, tres meses de separación y prueba de enero a mayo de 2026, más el piloto de control de junio a agosto.</template></section>
+<section class="lamina anexo"><img class="isotipo" src="assets/isotipo_utec.png" alt=""><img class="trama" src="assets/trama.png" alt="">
+    <div class="interior"><div class="etiqueta et-anexo">Anexo A3</div>
+      <h1>Benchmark: ocho modelos con los mismos datos</h1><div class="cuerpo">
+    <div class="fila" style="gap:26px"><div class="fig f zoom" style="width:700px"><img src="assets/F06_benchmark.svg" alt=""></div>
+    <div style="flex:1;padding-top:20px"><ul class="vin lista-foco grande"><li class="f"><b>Ninguno supera a la regresión logística </b>en PR AUC.</li><li class="f"><b>Se queda la más simple: </b>calibrada y explicable.</li><li class="f"><b>Frente a la regla, </b>a la par: el techo está en los datos.</li></ul></div></div></div></div><template class="nota">Anexo. Ocho modelos con los mismos datos; ninguno supera a la regresión logística, que es la más simple y explicable.</template></section>
+<section class="lamina anexo"><img class="isotipo" src="assets/isotipo_utec.png" alt=""><img class="trama" src="assets/trama.png" alt="">
+    <div class="interior"><div class="etiqueta et-anexo">Anexo A4</div>
+      <h1>Piloto de control mes a mes</h1><p class="sub">SAIDI por vegetación evitable con el plan de mayo, 8 distritos</p><div class="cuerpo">
+    <div class="fila" style="gap:26px"><div class="fig f zoom" style="width:720px"><img src="assets/F02_control_mensual.svg" alt=""></div>
+    <div style="flex:1;padding-top:10px"><ul class="vin lista-foco grande"><li class="f"><b>Supera al azar </b>en los tres meses.</li><li class="f"><b>Frente a la regla: </b>gana en agosto, empata en julio, pierde por poco en junio.</li><li class="f"><b>Agosto </b>llega al día 20.</li></ul></div></div></div></div><template class="nota">Anexo. Mes a mes, el plan supera al azar en los tres meses y empata con la regla.</template></section></main>
+<div class="progreso"><span></span></div><div class="contador"></div><div class="notas"></div>
+<div class="ayuda">→ avanzar · ← retroceder · F pantalla completa · S notas · T mostrar todo <button aria-label="Cerrar ayuda">✕</button></div>
+<script src="assets/motor.js"></script></body></html>

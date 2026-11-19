@@ -1,49 +1,49 @@
-Guion de voz en off. Demo de la herramienta de priorización de poda, 60 segundos
+Guion de voz en off. Demo de la herramienta de priorización de poda, 1:22 minutos
 
 Video: Demo_Herramienta_Poda_Pluz.mp4. Los subtítulos van dentro del video.
-Ritmo: unas 150 palabras en total, a velocidad de conversación. Cada bloque empieza cuando cambia el subtítulo.
+Ritmo: a velocidad de conversación. Cada bloque empieza cuando cambia el subtítulo.
 
-0:00 a 0:02
-Les presentamos la herramienta de priorización de poda de Pluz y UTEC.
+0:00 a 0:06
+Para ingresar no hace falta instalar nada: basta abrir la dirección en el navegador, en la computadora o el celular, o escanear este código.
 
-0:02 a 0:05
-Este es el plan de poda priorizado para el piloto de Los Olivos, con el plan del próximo trimestre.
+0:06 a 0:10
+Al entrar, la página abre directamente el plan de poda priorizado del próximo trimestre para el piloto de Los Olivos, con los datos de Pluz al corte más reciente.
 
-0:05 a 0:09
-Arriba, cuatro indicadores: cuántos alimentadores entran al plan, a cuántos clientes protegen, cuánto SAIDI y cuántos cortes por vegetación reúnen.
+0:10 a 0:16
+El plan propone diez de los treinta alimentadores. Arriba vemos lo que cubren: clientes, minutos de SAIDI y cortes por vegetación.
 
-0:09 a 0:13
-Esta franja lo respalda con lo que pasó: en la prueba, un plan así cubría tres cuartas partes del SAIDI por vegetación.
+0:16 a 0:20
+El centro de la herramienta es el mapa, en vista satelital: se ven las calles y los árboles de cada zona del plan, para planificar cómo llega la cuadrilla.
 
-0:13 a 0:17
-En el mapa, cada celda es una subestación. Al pasar el puntero vemos su ficha.
+0:20 a 0:24
+Los números marcan el orden del plan. Al pasar el puntero por una zona aparece su ficha: índice, riesgo, clientes y SAIDI.
 
-0:17 a 0:18
-Con un clic la fijamos en todas las vistas.
+0:24 a 0:28
+Lista y mapa están enlazados: un clic en la lista ubica la zona en el mapa y abre su detalle.
 
-0:18 a 0:23
-El detalle explica su puesto: riesgo, tiempo sin poda, SAIDI y clientes, que suman el índice.
+0:28 a 0:36
+Al acercar aparecen los postes de media tensión sobre la imagen satelital: se ve por dónde pasa el alimentador y qué árboles lo rodean.
 
-0:23 a 0:28
-Si las cuadrillas alcanzan para más, movemos el tamaño del plan y todo se recalcula.
+0:36 a 0:44
+El mismo mapa se puede ver por alimentador, para programar la poda, o por subestación, para despachar a la cuadrilla.
 
-0:28 a 0:33
-El buscador encuentra un alimentador por su código y los indicadores pasan a describir solo ese.
+0:44 a 0:50
+Si las cuadrillas alcanzan para más, movemos el tamaño del plan: el mapa, la lista y los indicadores se recalculan al instante.
 
-0:33 a 0:38
-La vista satelital muestra calles y postes, para planificar el acceso.
+0:50 a 0:57
+El detalle explica por qué cada zona está en el plan: su riesgo, el tiempo sin poda, el SAIDI y los clientes, que suman el índice.
 
-0:38 a 0:42
-Y el plan se descarga en un archivo que Excel abre directamente.
+0:57 a 1:02
+El buscador encuentra un alimentador, una dirección o un poste, y lleva el mapa hasta ahí.
 
-0:42 a 0:47
-Podemos comparar Los Olivos con otros siete distritos de Lima Norte, en la misma escala.
+1:02 a 1:06
+Finalmente, el plan se descarga en un archivo que Excel abre directamente, listo para programar a los contratistas de poda.
 
-0:47 a 0:51
-El Benchmark muestra que la lista cubre mucho más SAIDI evitable que el azar.
+1:06 a 1:13
+El mismo método ya corre en otros siete distritos de Lima Norte, que se comparan lado a lado con el piloto.
 
-0:51 a 0:57
-Y cada semana, el archivo de Pluz se revisa aquí antes de actualizar la herramienta.
+1:13 a 1:19
+Cada semana, el archivo de Pluz se arrastra a esta página, que lo revisa y muestra qué trae antes de actualizar la herramienta.
 
-0:57 a 1:00
+1:19 a 1:22
 De podar por calendario a podar por riesgo.

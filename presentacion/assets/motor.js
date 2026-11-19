@@ -57,6 +57,11 @@
   }
 
   function enfocar(l) {
+    // En cada figura solo queda visible el último resaltado; los anteriores se apagan.
+    l.querySelectorAll(".fig").forEach((fg) => {
+      const marcas = Array.from(fg.querySelectorAll(".marca.on"));
+      marcas.forEach((m, i) => m.classList.toggle("pasada", i < marcas.length - 1));
+    });
     // En las listas con foco, la última viñeta visible queda resaltada y las anteriores se atenúan.
     l.querySelectorAll(".lista-foco").forEach((lista) => {
       const vis = Array.from(lista.querySelectorAll(":scope > .f.on"));
@@ -92,7 +97,10 @@
     }
     // Al mostrar todo de golpe (tecla T o al volver atrás) no se atenúa nada.
     if (animar) enfocar(laminas[n]);
-    else laminas[n].querySelectorAll(".atenuado").forEach((x) => x.classList.remove("atenuado"));
+    else {
+      laminas[n].querySelectorAll(".atenuado").forEach((x) => x.classList.remove("atenuado"));
+      laminas[n].querySelectorAll(".marca").forEach((x) => x.classList.add("pasada"));
+    }
     barra.style.width = `${(100 * (n + 1)) / laminas.length}%`;
     contador.textContent = `${n + 1} / ${laminas.length}`;
     notas.innerHTML = laminas[n].querySelector("template.nota")?.innerHTML || "";
