@@ -175,3 +175,6 @@ ul.vin.xl li { font-size: 24px; margin-bottom: 20px; }
 .sprint-chip small { display: block; font-weight: normal; font-size: 13px; opacity: .9; }
 
 .marca.pasada { opacity: 0 !important; box-shadow: none !important; animation: none; }
+
+.cifras-4 .numero.xl b { font-size: 46px; }
+.cifras-4 .numero.xl > span { font-size: 16px; }
