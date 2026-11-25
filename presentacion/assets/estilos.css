@@ -178,3 +178,4 @@ ul.vin.xl li { font-size: 24px; margin-bottom: 20px; }
 
 .cifras-4 .numero.xl b { font-size: 46px; }
 .cifras-4 .numero.xl > span { font-size: 16px; }
+.cifras-3 .numero.xl b { font-size: 54px; white-space: nowrap; }
